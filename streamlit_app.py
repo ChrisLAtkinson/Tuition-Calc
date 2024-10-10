@@ -29,7 +29,7 @@ def format_input_as_currency(input_value):
         return ""
 
 # Function to generate a downloadable PDF report
-def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote):
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -78,8 +78,16 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
         pdf.drawString(100, row_y, line)
         row_y -= 20
 
-    # Embed the Christian School Management quote
+    # Add the external link before the quote
     row_y -= 20
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(100, row_y, "External Link to the Article:")
+    row_y -= 20
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(100, row_y, link)
+
+    # Embed the Christian School Management quote
+    row_y -= 40  # Adding some space
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(100, row_y, "Quote from Christian School Management:")
     pdf.setFont("Helvetica", 10)
@@ -188,6 +196,9 @@ Tuition is the primary source of income the school has. It must be set with the 
 Tuition setting is a formula, not a conversation. That doesn’t make it easy. It does make it simple. Like it or not, the Christian school’s tuition must go up by the Operations Tuition Increase. This number is based on the external economic realities of inflation and the rate of productivity increase. The annual tuition increase maintains the power of the school’s current operations budget. It allows you to continue to do what you are doing at the same level of excellence."
 """
 
+# External link to the article
+link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
+
 # Calculate new tuition with average increase
 if st.button("Calculate New Tuition"):
     # Prevent division by zero or missing data issues
@@ -223,6 +234,9 @@ if st.button("Calculate New Tuition"):
         The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
         """
         st.write(summary_text)
+
+        # Include the link before the Christian School Management quote
+        st.markdown(f"**[External Link to the Article]({link})**")
 
         # Include the Christian School Management quote
         st.subheader("Quote from Christian School Management")
@@ -279,7 +293,7 @@ if st.button("Calculate New Tuition"):
         st.table(total_table)
 
         # Generate the downloadable PDF report
-        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote)
+        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link)
         
         # Create a download button for the PDF report
         st.download_button(

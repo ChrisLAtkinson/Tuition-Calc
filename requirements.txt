@@ -2,4 +2,4 @@ streamlit
 matplotlib
 pandas
 plotly
-pip install reportlab
+reportlab

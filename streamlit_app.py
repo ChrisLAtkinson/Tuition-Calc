@@ -6,6 +6,8 @@ from io import BytesIO  # For generating the PDF in memory
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas  # For creating the PDF
 from reportlab.lib import colors  # For adding colors to the PDF
+from reportlab.lib.utils import ImageReader  # For adding images to PDF
+import tempfile
 
 # Configure locale to display currency with commas and two decimal places
 locale.setlocale(locale.LC_ALL, '')
@@ -27,7 +29,7 @@ def format_input_as_currency(input_value):
         return ""
 
 # Function to generate a downloadable PDF report
-def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df):
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -65,6 +67,29 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     for i, row in strategic_items_df.iterrows():
         pdf.drawString(100, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
         row_y -= 20
+
+    # Add the calculation summary text
+    row_y -= 20
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(100, row_y, "Summary of Calculations:")
+    pdf.setFont("Helvetica", 10)
+    row_y -= 20
+    for line in summary_text.split('\n'):
+        pdf.drawString(100, row_y, line)
+        row_y -= 20
+
+    # Embed the Christian School Management quote
+    row_y -= 20
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(100, row_y, "Quote from Christian School Management:")
+    pdf.setFont("Helvetica", 10)
+    row_y -= 20
+    for line in csm_quote.split('\n'):
+        pdf.drawString(100, row_y, line)
+        row_y -= 20
+
+    # Embed the graph image in the PDF
+    pdf.drawImage(ImageReader(graph_image), 100, row_y - 200, width=400, height=200)
 
     # Finalize PDF
     pdf.showPage()
@@ -154,6 +179,15 @@ if formatted_financial_aid:
 else:
     financial_aid = 0.0
 
+# Christian School Management Quote
+csm_quote = """
+"The Christian school budget is a Kingdom document, a moral document, and an arithmetic document. Its primary purpose is to empower the school to deliver its mission with excellence (Kingdom). Its secondary purpose is to ensure that the school acts in a Christian way in all its actions and, in particular, in relation to its employees (moral). Its final purpose is to ensure that Trustees carry out their fiscal responsibility in balancing the school’s finances. In other words, it is not just a balance sheet or an audit statement. It is, rather, the expression of the mission and a clear statement of the priorities set by the school to fulfill that mission. “For where your treasure is, there your heart will be also” (Matthew 6:21).
+
+Tuition is the primary source of income the school has. It must be set with the strategic interests of the next generation of children in mind. It must meet today’s needs with an understanding of the future. It must be both a today and a next-five/ten-years decision.
+
+Tuition setting is a formula, not a conversation. That doesn’t make it easy. It does make it simple. Like it or not, the Christian school’s tuition must go up by the Operations Tuition Increase. This number is based on the external economic realities of inflation and the rate of productivity increase. The annual tuition increase maintains the power of the school’s current operations budget. It allows you to continue to do what you are doing at the same level of excellence."
+"""
+
 # Calculate new tuition with average increase
 if st.button("Calculate New Tuition"):
     # Prevent division by zero or missing data issues
@@ -181,13 +215,18 @@ if st.button("Calculate New Tuition"):
         st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
         # Word summary of how the results were gathered
-        st.write("""
+        summary_text = """
         ### Summary of Calculation:
         The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
         The new tuition was calculated by applying an inflation rate (Rate of Inflation + 2.08% Efficiency Rate) to the total current tuition. 
         Additionally, strategic costs were distributed across all students. The average tuition increase percentage was then applied to each grade.
         The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
-        """)
+        """
+        st.write(summary_text)
+
+        # Include the Christian School Management quote
+        st.subheader("Quote from Christian School Management")
+        st.write(csm_quote)
 
         # Create a DataFrame for the tuition by grade level
         tuition_data = {
@@ -223,6 +262,11 @@ if st.button("Calculate New Tuition"):
         fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
         st.plotly_chart(fig)
 
+        # Save the graph to an image file for PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+            fig.write_image(temp_file.name)
+            graph_image = temp_file.name
+
         # Show the total results in a formatted table
         total_table = pd.DataFrame({
             "Total Current Tuition": [format_currency(total_current_tuition)],
@@ -235,7 +279,7 @@ if st.button("Calculate New Tuition"):
         st.table(total_table)
 
         # Generate the downloadable PDF report
-        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df)
+        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote)
         
         # Create a download button for the PDF report
         st.download_button(

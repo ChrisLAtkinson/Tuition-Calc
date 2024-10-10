@@ -156,7 +156,6 @@ for i in range(num_grades):
     current_tuition.append(tuition)
 
 # Step 3: Add Strategic Items
-st.subheader("Step 3: Add Strategic Items")
 strategic_items_costs = []  # Renamed this list to avoid conflict with the strategic_items input list
 strategic_item_names = []
 num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0)
@@ -206,6 +205,9 @@ if formatted_financial_aid:
     financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
 else:
     financial_aid = 0.0
+
+# External link definition (fix for missing link variable)
+link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
 
 # Expense Summary Variables
 total_expenses = 1555231

@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go  # For interactive graphs
 import locale
 
 # Configure locale to display currency with commas and two decimal places
@@ -54,10 +55,13 @@ for i in range(num_grades):
 # Step 3: Add Strategic Items
 st.subheader("Step 3: Add Strategic Items")
 strategic_items = []
+strategic_item_names = []
 num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0)
 
 for i in range(num_items):
     item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
+    strategic_item_names.append(item_name)
+    
     item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
     formatted_item_cost = format_input_as_currency(item_cost_input)
     st.text(f"Formatted: {formatted_item_cost}")
@@ -151,17 +155,23 @@ if st.button("Calculate New Tuition"):
         st.subheader("Tuition by Grade Level")
         st.write(df)
 
-        # Plot graph for current and new tuition per grade
-        st.subheader("Tuition Increase Graph")
-        fig, ax = plt.subplots()
-        ax.bar(df["Grade"], [float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], label="Current Tuition", color="skyblue")
-        ax.bar(df["Grade"], [float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], label="New Tuition", color="orange", alpha=0.7)
-        ax.set_ylabel("Tuition ($)")
-        ax.set_title("Current vs New Tuition by Grade Level")
-        plt.xticks(rotation=45)
-        ax.legend()
+        # Show strategic items with names and costs
+        st.subheader("Strategic Items")
+        strategic_items_df = pd.DataFrame({
+            "Strategic Item": strategic_item_names,
+            "Cost ($)": [format_currency(cost) for cost in strategic_items]
+        })
+        st.write(strategic_items_df)
 
-        st.pyplot(fig)
+        # Create an interactive side-by-side bar graph using Plotly
+        st.subheader("Interactive Tuition Increase Graph")
+        fig = go.Figure(data=[
+            go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
+            go.Bar(name='New Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], marker_color='orange')
+        ])
+        # Change the bar mode
+        fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
+        st.plotly_chart(fig)
 
         # Show the total results in a formatted table
         total_table = pd.DataFrame({
@@ -174,10 +184,8 @@ if st.button("Calculate New Tuition"):
         st.subheader("Overall Summary")
         st.table(total_table)
 
-        # Show a breakdown of strategic costs and other items
-        st.subheader("Strategic Items and Costs")
-        strategic_costs_df = pd.DataFrame({
-            "Strategic Item": [f"Item {i+1}" for i in range(num_items)],
-            "Cost ($)": [format_currency(cost) for cost in strategic_items]
-        })
-        st.write(strategic_costs_df)
+        # Print Button (JavaScript for printing)
+        st.markdown("""
+            <button onclick="window.print()">Print Results</button>
+        """, unsafe_allow_html=True)
+

@@ -8,6 +8,7 @@ from reportlab.pdfgen import canvas  # For creating the PDF
 from reportlab.lib import colors  # For adding colors to the PDF
 from reportlab.lib.utils import ImageReader  # For adding images to PDF
 import tempfile
+import textwrap
 
 # Configure locale to display currency with commas and two decimal places
 locale.setlocale(locale.LC_ALL, '')
@@ -28,8 +29,12 @@ def format_input_as_currency(input_value):
     except ValueError:
         return ""
 
+# Function to wrap long text for the PDF
+def wrap_text(text, max_width=90):
+    return "\n".join(textwrap.wrap(text, max_width))
+
 # Function to generate a downloadable PDF report
-def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link):
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_chart_image):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -74,7 +79,8 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     pdf.drawString(100, row_y, "Summary of Calculations:")
     pdf.setFont("Helvetica", 10)
     row_y -= 20
-    for line in summary_text.split('\n'):
+    wrapped_summary_text = wrap_text(summary_text)
+    for line in wrapped_summary_text.split('\n'):
         pdf.drawString(100, row_y, line)
         row_y -= 20
 
@@ -84,7 +90,10 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     pdf.drawString(100, row_y, "External Link to the Article:")
     row_y -= 20
     pdf.setFont("Helvetica", 10)
-    pdf.drawString(100, row_y, link)
+    wrapped_link = wrap_text(link, max_width=70)
+    for line in wrapped_link.split('\n'):
+        pdf.drawString(100, row_y, line)
+        row_y -= 20
 
     # Embed the Christian School Management quote
     row_y -= 40  # Adding some space
@@ -92,12 +101,23 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     pdf.drawString(100, row_y, "Quote from Christian School Management:")
     pdf.setFont("Helvetica", 10)
     row_y -= 20
-    for line in csm_quote.split('\n'):
+    wrapped_csm_quote = wrap_text(csm_quote, max_width=90)
+    for line in wrapped_csm_quote.split('\n'):
         pdf.drawString(100, row_y, line)
         row_y -= 20
 
-    # Embed the graph image in the PDF
-    pdf.drawImage(ImageReader(graph_image), 100, row_y - 200, width=400, height=200)
+    # Add the Expense Summary Chart to the PDF
+    row_y -= 40  # Adding space before expense summary
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(100, row_y, "Expense Summary:")
+    row_y -= 20
+    pdf.setFont("Helvetica", 10)
+    for line in wrap_text(expense_summary, max_width=90).split('\n'):
+        pdf.drawString(100, row_y, line)
+        row_y -= 20
+
+    # Embed the current vs. next year comparison chart in the PDF
+    pdf.drawImage(ImageReader(comparison_chart_image), 100, row_y - 200, width=400, height=200)
 
     # Finalize PDF
     pdf.showPage()
@@ -169,7 +189,7 @@ else:
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
-roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01)
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=7.5)
 efficiency_rate = 2.08 / 100  # Fixed rate of efficiency
 
 # Step 6: Compensation Percentage
@@ -187,17 +207,28 @@ if formatted_financial_aid:
 else:
     financial_aid = 0.0
 
-# Christian School Management Quote
-csm_quote = """
-"The Christian school budget is a Kingdom document, a moral document, and an arithmetic document. Its primary purpose is to empower the school to deliver its mission with excellence (Kingdom). Its secondary purpose is to ensure that the school acts in a Christian way in all its actions and, in particular, in relation to its employees (moral). Its final purpose is to ensure that Trustees carry out their fiscal responsibility in balancing the school’s finances. In other words, it is not just a balance sheet or an audit statement. It is, rather, the expression of the mission and a clear statement of the priorities set by the school to fulfill that mission. “For where your treasure is, there your heart will be also” (Matthew 6:21).
+# Expense Summary Variables
+total_expenses = 1555231
+new_expenses = 1697451
+oti = 7.50
+strategic_items = 1.6
+total_increase = 9.14
 
-Tuition is the primary source of income the school has. It must be set with the strategic interests of the next generation of children in mind. It must meet today’s needs with an understanding of the future. It must be both a today and a next-five/ten-years decision.
-
-Tuition setting is a formula, not a conversation. That doesn’t make it easy. It does make it simple. Like it or not, the Christian school’s tuition must go up by the Operations Tuition Increase. This number is based on the external economic realities of inflation and the rate of productivity increase. The annual tuition increase maintains the power of the school’s current operations budget. It allows you to continue to do what you are doing at the same level of excellence."
+expense_summary = f"""
+Total Expenses: {format_currency(total_expenses)}
+ROI plus RPI (OTI): {oti}%
+Strategic Items: {strategic_items}%
+Total Increase in Expenses: {total_increase}%
+New Expense Budget: {format_currency(new_expenses)}
 """
 
-# External link to the article
-link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
+# Comparison Variables for Current vs. Next School Year
+total_tuition_current = 1295422
+total_tuition_next = 1420361
+total_expenses_current = 1555231
+total_expenses_next = 1697451
+income_to_expenses_current = 83.29
+income_to_expenses_next = 83.68
 
 # Calculate new tuition with average increase
 if st.button("Calculate New Tuition"):
@@ -276,10 +307,20 @@ if st.button("Calculate New Tuition"):
         fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
         st.plotly_chart(fig)
 
-        # Save the graph to an image file for PDF
+        # Create a comparison chart for Total Tuition, Total Expenses, and % Income/Expenses
+        st.subheader("Current vs Next School Year Comparison")
+        comparison_fig = go.Figure(data=[
+            go.Bar(name='Total Tuition and Fees', x=["Current School Year", "Next School Year"], y=[total_tuition_current, total_tuition_next], marker_color='green'),
+            go.Bar(name='Total Expenses', x=["Current School Year", "Next School Year"], y=[total_expenses_current, total_expenses_next], marker_color='red'),
+            go.Bar(name='% Income/Expenses', x=["Current School Year", "Next School Year"], y=[income_to_expenses_current, income_to_expenses_next], marker_color='blue')
+        ])
+        comparison_fig.update_layout(barmode='group', title_text="Comparison of Total Tuition, Expenses, and % Income/Expenses")
+        st.plotly_chart(comparison_fig)
+
+        # Save the comparison chart to an image file for PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-            fig.write_image(temp_file.name)
-            graph_image = temp_file.name
+            comparison_fig.write_image(temp_file.name)
+            comparison_chart_image = temp_file.name
 
         # Show the total results in a formatted table
         total_table = pd.DataFrame({
@@ -293,7 +334,7 @@ if st.button("Calculate New Tuition"):
         st.table(total_table)
 
         # Generate the downloadable PDF report
-        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link)
+        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_chart_image)
         
         # Create a download button for the PDF report
         st.download_button(

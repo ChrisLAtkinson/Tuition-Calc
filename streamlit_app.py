@@ -119,6 +119,9 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     # Embed the current vs. next year comparison chart in the PDF
     pdf.drawImage(ImageReader(comparison_chart_image), 100, row_y - 200, width=400, height=200)
 
+    # Embed the tuition increase graph in the PDF
+    pdf.drawImage(ImageReader(graph_image), 100, row_y - 450, width=400, height=200)
+
     # Finalize PDF
     pdf.showPage()
     pdf.save()
@@ -317,6 +320,11 @@ if st.button("Calculate New Tuition"):
         # Change the bar mode
         fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
         st.plotly_chart(fig)
+
+        # Save the tuition graph to an image file for PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+            fig.write_image(temp_file.name)
+            graph_image = temp_file.name
 
         # Create a comparison chart for Total Tuition, Total Expenses, and % Income/Expenses
         st.subheader("Current vs Next School Year Comparison")

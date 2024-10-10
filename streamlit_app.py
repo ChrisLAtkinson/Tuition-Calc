@@ -1,4 +1,6 @@
-import streamlit as st
+iimport streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
 import locale
 
 # Configure locale to display currency with commas and two decimal places
@@ -26,7 +28,7 @@ num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12
 for i in range(num_grades):
     grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
     students = st.number_input(f"Number of Students in {grade}", min_value=1, step=1)
-    tuition = st.number_input(f"Current Tuition per Student in {grade} ($)", min_value=0.0, step=0.01)
+    tuition = st.number_input(f"Current Tuition per Student in {grade} ($)", min_value=0.0, step=0.01, format="%.2f")
     
     grades.append(grade)
     num_students.append(students)
@@ -39,12 +41,12 @@ num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=
 
 for i in range(num_items):
     item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
-    item_cost = st.number_input(f"Cost of {item_name} ($)", min_value=0.0, step=0.01)
+    item_cost = st.number_input(f"Cost of {item_name} ($)", min_value=0.0, step=0.01, format="%.2f")
     strategic_items.append(item_cost)
 
 # Step 4: Previous Year's Expense Budget
 st.subheader("Step 4: Enter the Previous Year's Total Expenses")
-previous_expenses = st.number_input("Total Expenses ($)", min_value=0.0, step=0.01)
+previous_expenses = st.number_input("Total Expenses ($)", min_value=0.0, step=0.01, format="%.2f")
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
@@ -57,7 +59,7 @@ compensation_percentage = st.number_input("Compensation Percentage (%)", min_val
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
-financial_aid = st.number_input("Total Financial Aid ($)", min_value=0.0, step=0.01)
+financial_aid = st.number_input("Total Financial Aid ($)", min_value=0.0, step=0.01, format="%.2f")
 
 # Calculate new tuition with average increase
 if st.button("Calculate New Tuition"):
@@ -69,7 +71,6 @@ if st.button("Calculate New Tuition"):
         total_students = sum(num_students)
         total_strategic_costs = sum(strategic_items)
 
-        # Handle cases with no strategic items
         adjusted_inflation = roi_percentage / 100 + efficiency_rate
         total_new_tuition = total_current_tuition + (total_current_tuition * adjusted_inflation) + total_strategic_costs
         
@@ -86,9 +87,59 @@ if st.button("Calculate New Tuition"):
         st.write(f"**Average Tuition Increase Percentage:** {avg_increase_percentage:.2f}%")
         st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-        # Display detailed grade-level results
+        # Word summary of how the results were gathered
+        st.write("""
+        ### Summary of Calculation:
+        The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
+        The new tuition was calculated by applying an inflation rate (Rate of Inflation + 2.08% Efficiency Rate) to the total current tuition. 
+        Additionally, strategic costs were distributed across all students. The average tuition increase percentage was then applied to each grade.
+        The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
+        """)
+
+        # Create a DataFrame for the tuition by grade level
+        tuition_data = {
+            "Grade": grades,
+            "Number of Students": num_students,
+            "Current Tuition per Student": current_tuition,
+        }
+
+        df = pd.DataFrame(tuition_data)
+        df["Total Current Tuition"] = df["Number of Students"] * df["Current Tuition per Student"]
+        df["New Tuition per Student"] = df["Current Tuition per Student"] * (1 + avg_increase_percentage / 100)
+        df["Increase per Student"] = df["New Tuition per Student"] - df["Current Tuition per Student"]
+
+        # Show the table of results
         st.subheader("Tuition by Grade Level")
-        for grade, students, tuition in zip(grades, num_students, current_tuition):
-            new_tuition = tuition * (1 + avg_increase_percentage / 100)
-            increase = new_tuition - tuition
-            st.write(f"**{grade}:** Current Tuition: {format_currency(tuition)}, New Tuition: {format_currency(new_tuition)}, Increase: {format_currency(increase)}")
+        st.write(df)
+
+        # Plot graph for current and new tuition per grade
+        st.subheader("Tuition Increase Graph")
+        fig, ax = plt.subplots()
+        ax.bar(df["Grade"], df["Current Tuition per Student"], label="Current Tuition", color="skyblue")
+        ax.bar(df["Grade"], df["New Tuition per Student"], label="New Tuition", color="orange", alpha=0.7)
+        ax.set_ylabel("Tuition ($)")
+        ax.set_title("Current vs New Tuition by Grade Level")
+        plt.xticks(rotation=45)
+        ax.legend()
+
+        st.pyplot(fig)
+
+        # Show the total results in a formatted table
+        total_table = pd.DataFrame({
+            "Total Current Tuition": [format_currency(total_current_tuition)],
+            "Total New Tuition": [format_currency(total_new_tuition)],
+            "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
+            "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
+        })
+
+        st.subheader("Overall Summary")
+        st.table(total_table)
+
+        # Show a breakdown of strategic costs and other items
+        st.subheader("Strategic Items and Costs")
+        strategic_costs_df = pd.DataFrame({
+            "Strategic Item": [f"Item {i+1}" for i in range(num_items)],
+            "Cost ($)": [format_currency(cost) for cost in strategic_items]
+        })
+        st.write(strategic_costs_df)
+

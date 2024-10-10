@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go  # For interactive graphs
 import locale
-from io import StringIO  # For handling text output as a downloadable file
+from io import BytesIO  # For generating the PDF in memory
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas  # For creating the PDF
+from reportlab.lib import colors  # For adding colors to the PDF
 
 # Configure locale to display currency with commas and two decimal places
 locale.setlocale(locale.LC_ALL, '')
@@ -23,19 +26,52 @@ def format_input_as_currency(input_value):
     except ValueError:
         return ""
 
-# Function to generate a downloadable summary of the results
-def generate_downloadable_summary(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df):
-    output = StringIO()
-    output.write(f"Report Title: {report_title}\n")
-    output.write(f"Total Current Tuition: {format_currency(total_current_tuition)}\n")
-    output.write(f"Total New Tuition: {format_currency(total_new_tuition)}\n")
-    output.write(f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%\n")
-    output.write(f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%\n")
-    output.write("\nTuition by Grade Level:\n")
-    output.write(df.to_string(index=False))
-    output.write("\n\nStrategic Items and Costs:\n")
-    output.write(strategic_items_df.to_string(index=False))
-    return output.getvalue()
+# Function to generate a downloadable PDF report
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Title of the report
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(100, height - 50, f"Report Title: {report_title}")
+
+    # Summary details
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, height - 80, f"Total Current Tuition: {format_currency(total_current_tuition)}")
+    pdf.drawString(100, height - 100, f"Total New Tuition: {format_currency(total_new_tuition)}")
+    pdf.drawString(100, height - 120, f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%")
+    pdf.drawString(100, height - 140, f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%")
+
+    # Add a header for the table
+    pdf.drawString(100, height - 160, "Tuition by Grade Level:")
+
+    # Draw table for tuition by grade level
+    pdf.setFont("Helvetica", 10)
+    pdf.setFillColor(colors.black)
+
+    row_y = height - 180
+    for i, row in df.iterrows():
+        pdf.drawString(100, row_y, f"{row['Grade']}: {row['Number of Students']} students, Current Tuition: {row['Current Tuition per Student']}, New Tuition: {row['New Tuition per Student']}")
+        row_y -= 20
+
+    # Strategic Items Section
+    row_y -= 20  # Adding space between sections
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(100, row_y, "Strategic Items and Costs:")
+
+    pdf.setFont("Helvetica", 10)
+    row_y -= 20
+    for i, row in strategic_items_df.iterrows():
+        pdf.drawString(100, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
+        row_y -= 20
+
+    # Finalize PDF
+    pdf.showPage()
+    pdf.save()
+
+    buffer.seek(0)
+    return buffer
 
 # Title of the app
 st.title("Tuition Calculation Tool")
@@ -163,48 +199,4 @@ if st.button("Calculate New Tuition"):
         df = pd.DataFrame(tuition_data)
         df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
         df["New Tuition per Student"] = [format_currency(tuition * (1 + avg_increase_percentage / 100)) for tuition in current_tuition]
-        df["Increase per Student"] = [format_currency((tuition * (1 + avg_increase_percentage / 100)) - tuition) for tuition in current_tuition]
-
-        # Show the table of results
-        st.subheader("Tuition by Grade Level")
-        st.write(df)
-
-        # Show strategic items with names and costs
-        st.subheader("Strategic Items")
-        strategic_items_df = pd.DataFrame({
-            "Strategic Item": strategic_item_names,
-            "Cost ($)": [format_currency(cost) for cost in strategic_items]
-        })
-        st.write(strategic_items_df)
-
-        # Create an interactive side-by-side bar graph using Plotly
-        st.subheader("Interactive Tuition Increase Graph")
-        fig = go.Figure(data=[
-            go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
-            go.Bar(name='New Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], marker_color='orange')
-        ])
-        # Change the bar mode
-        fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
-        st.plotly_chart(fig)
-
-        # Show the total results in a formatted table
-        total_table = pd.DataFrame({
-            "Total Current Tuition": [format_currency(total_current_tuition)],
-            "Total New Tuition": [format_currency(total_new_tuition)],
-            "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
-            "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
-        })
-
-        st.subheader("Overall Summary")
-        st.table(total_table)
-
-        # Generate the downloadable summary
-        summary_text = generate_downloadable_summary(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df)
-        
-        # Create a download button for the report
-        st.download_button(
-            label="Download Report",
-            data=summary_text,
-            file_name="tuition_report.txt",
-            mime="text/plain"
-        )
+        df["Increase per Student"] = [format_currency((tuition

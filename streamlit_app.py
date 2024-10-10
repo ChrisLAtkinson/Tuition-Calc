@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go  # For interactive graphs
 import locale
+from io import StringIO  # For handling text output as a downloadable file
 
 # Configure locale to display currency with commas and two decimal places
 locale.setlocale(locale.LC_ALL, '')
@@ -22,6 +22,20 @@ def format_input_as_currency(input_value):
         return f"${value:,.2f}"
     except ValueError:
         return ""
+
+# Function to generate a downloadable summary of the results
+def generate_downloadable_summary(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df):
+    output = StringIO()
+    output.write(f"Report Title: {report_title}\n")
+    output.write(f"Total Current Tuition: {format_currency(total_current_tuition)}\n")
+    output.write(f"Total New Tuition: {format_currency(total_new_tuition)}\n")
+    output.write(f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%\n")
+    output.write(f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%\n")
+    output.write("\nTuition by Grade Level:\n")
+    output.write(df.to_string(index=False))
+    output.write("\n\nStrategic Items and Costs:\n")
+    output.write(strategic_items_df.to_string(index=False))
+    return output.getvalue()
 
 # Title of the app
 st.title("Tuition Calculation Tool")
@@ -184,8 +198,13 @@ if st.button("Calculate New Tuition"):
         st.subheader("Overall Summary")
         st.table(total_table)
 
-        # Print Button (JavaScript for printing)
-        st.markdown("""
-            <button onclick="window.print()">Print Results</button>
-        """, unsafe_allow_html=True)
-
+        # Generate the downloadable summary
+        summary_text = generate_downloadable_summary(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df)
+        
+        # Create a download button for the report
+        st.download_button(
+            label="Download Report",
+            data=summary_text,
+            file_name="tuition_report.txt",
+            mime="text/plain"
+        )

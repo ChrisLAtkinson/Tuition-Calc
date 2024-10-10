@@ -13,6 +13,15 @@ def format_currency(value):
     except:
         return f"${value:,.2f}"
 
+# Function to format input strings as currency
+def format_input_as_currency(input_value):
+    try:
+        input_value = input_value.replace(",", "").replace("$", "")
+        value = float(input_value)
+        return f"${value:,.2f}"
+    except ValueError:
+        return ""
+
 # Title of the app
 st.title("Tuition Calculation Tool")
 
@@ -28,8 +37,16 @@ num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12
 for i in range(num_grades):
     grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
     students = st.number_input(f"Number of Students in {grade}", min_value=1, step=1)
-    tuition = st.number_input(f"Current Tuition per Student in {grade} ($)", min_value=0.0, step=0.01, format="%.2f")
     
+    tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
+    formatted_tuition = format_input_as_currency(tuition_input)
+    st.text(f"Formatted: {formatted_tuition}")
+    
+    if formatted_tuition:
+        tuition = float(formatted_tuition.replace(",", "").replace("$", ""))
+    else:
+        tuition = 0.0
+
     grades.append(grade)
     num_students.append(students)
     current_tuition.append(tuition)
@@ -41,12 +58,27 @@ num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=
 
 for i in range(num_items):
     item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
-    item_cost = st.number_input(f"Cost of {item_name} ($)", min_value=0.0, step=0.01, format="%.2f")
+    item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
+    formatted_item_cost = format_input_as_currency(item_cost_input)
+    st.text(f"Formatted: {formatted_item_cost}")
+
+    if formatted_item_cost:
+        item_cost = float(formatted_item_cost.replace(",", "").replace("$", ""))
+    else:
+        item_cost = 0.0
+
     strategic_items.append(item_cost)
 
 # Step 4: Previous Year's Expense Budget
 st.subheader("Step 4: Enter the Previous Year's Total Expenses")
-previous_expenses = st.number_input("Total Expenses ($)", min_value=0.0, step=0.01, format="%.2f")
+total_expenses_input = st.text_input("Total Expenses ($)", "")
+formatted_expenses = format_input_as_currency(total_expenses_input)
+st.text(f"Formatted: {formatted_expenses}")
+
+if formatted_expenses:
+    previous_expenses = float(formatted_expenses.replace(",", "").replace("$", ""))
+else:
+    previous_expenses = 0.0
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
@@ -59,7 +91,14 @@ compensation_percentage = st.number_input("Compensation Percentage (%)", min_val
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
-financial_aid = st.number_input("Total Financial Aid ($)", min_value=0.0, step=0.01, format="%.2f")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+st.text(f"Formatted: {formatted_financial_aid}")
+
+if formatted_financial_aid:
+    financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
+else:
+    financial_aid = 0.0
 
 # Calculate new tuition with average increase
 if st.button("Calculate New Tuition"):

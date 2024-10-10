@@ -157,7 +157,7 @@ for i in range(num_grades):
 
 # Step 3: Add Strategic Items
 st.subheader("Step 3: Add Strategic Items")
-strategic_items = []
+strategic_items_costs = []  # Renamed this list to avoid conflict with the strategic_items input list
 strategic_item_names = []
 num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0)
 
@@ -174,7 +174,7 @@ for i in range(num_items):
     else:
         item_cost = 0.0
 
-    strategic_items.append(item_cost)
+    strategic_items_costs.append(item_cost)
 
 # Step 4: Previous Year's Expense Budget
 st.subheader("Step 4: Enter the Previous Year's Total Expenses")
@@ -238,7 +238,7 @@ if st.button("Calculate New Tuition"):
     else:
         total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
         total_students = sum(num_students)
-        total_strategic_costs = sum(strategic_items)
+        total_strategic_costs = sum(strategic_items_costs)  # Use the renamed list for summing strategic costs
 
         adjusted_inflation = roi_percentage / 100 + efficiency_rate
         total_new_tuition = total_current_tuition + (total_current_tuition * adjusted_inflation) + total_strategic_costs
@@ -293,7 +293,7 @@ if st.button("Calculate New Tuition"):
         st.subheader("Strategic Items")
         strategic_items_df = pd.DataFrame({
             "Strategic Item": strategic_item_names,
-            "Cost ($)": [format_currency(cost) for cost in strategic_items]
+            "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]  # Use the renamed list here
         })
         st.write(strategic_items_df)
 

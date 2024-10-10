@@ -199,4 +199,48 @@ if st.button("Calculate New Tuition"):
         df = pd.DataFrame(tuition_data)
         df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
         df["New Tuition per Student"] = [format_currency(tuition * (1 + avg_increase_percentage / 100)) for tuition in current_tuition]
-        df["Increase per Student"] = [format_currency((tuition
+        df["Increase per Student"] = [format_currency((tuition * (1 + avg_increase_percentage / 100)) - tuition) for tuition in current_tuition]
+
+        # Show the table of results
+        st.subheader("Tuition by Grade Level")
+        st.write(df)
+
+        # Show strategic items with names and costs
+        st.subheader("Strategic Items")
+        strategic_items_df = pd.DataFrame({
+            "Strategic Item": strategic_item_names,
+            "Cost ($)": [format_currency(cost) for cost in strategic_items]
+        })
+        st.write(strategic_items_df)
+
+        # Create an interactive side-by-side bar graph using Plotly
+        st.subheader("Interactive Tuition Increase Graph")
+        fig = go.Figure(data=[
+            go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
+            go.Bar(name='New Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], marker_color='orange')
+        ])
+        # Change the bar mode
+        fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
+        st.plotly_chart(fig)
+
+        # Show the total results in a formatted table
+        total_table = pd.DataFrame({
+            "Total Current Tuition": [format_currency(total_current_tuition)],
+            "Total New Tuition": [format_currency(total_new_tuition)],
+            "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
+            "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
+        })
+
+        st.subheader("Overall Summary")
+        st.table(total_table)
+
+        # Generate the downloadable PDF report
+        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df)
+        
+        # Create a download button for the PDF report
+        st.download_button(
+            label="Download Report as PDF",
+            data=pdf_buffer,
+            file_name="tuition_report.pdf",
+            mime="application/pdf"
+        )

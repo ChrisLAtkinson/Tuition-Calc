@@ -34,7 +34,7 @@ def wrap_text(text, max_width=90):
     return "\n".join(textwrap.wrap(text, max_width))
 
 # Function to generate a downloadable PDF report
-def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_chart_image):
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -116,8 +116,8 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
         pdf.drawString(100, row_y, line)
         row_y -= 20
 
-    # Embed the current vs. next year comparison chart in the PDF
-    pdf.drawImage(ImageReader(comparison_chart_image), 100, row_y - 200, width=400, height=200)
+    # Embed the current vs. next year comparison chart (table) in the PDF
+    pdf.drawImage(ImageReader(comparison_table_image), 100, row_y - 200, width=400, height=150)
 
     # Embed the tuition increase graph in the PDF
     pdf.drawImage(ImageReader(graph_image), 100, row_y - 450, width=400, height=200)
@@ -326,20 +326,29 @@ if st.button("Calculate New Tuition"):
             fig.write_image(temp_file.name)
             graph_image = temp_file.name
 
-        # Create a comparison chart for Total Tuition, Total Expenses, and % Income/Expenses
-        st.subheader("Current vs Next School Year Comparison")
-        comparison_fig = go.Figure(data=[
-            go.Bar(name='Total Tuition and Fees', x=["Current School Year", "Next School Year"], y=[total_tuition_current, total_tuition_next], marker_color='green'),
-            go.Bar(name='Total Expenses', x=["Current School Year", "Next School Year"], y=[total_expenses_current, total_expenses_next], marker_color='red'),
-            go.Bar(name='% Income/Expenses', x=["Current School Year", "Next School Year"], y=[income_to_expenses_current, income_to_expenses_next], marker_color='blue')
-        ])
-        comparison_fig.update_layout(barmode='group', title_text="Comparison of Total Tuition, Expenses, and % Income/Expenses")
-        st.plotly_chart(comparison_fig)
+        # Create a comparison table (chart) for Total Tuition, Total Expenses, and % Income/Expenses
+        comparison_table = pd.DataFrame({
+            "Category": ["Total Tuition and Fees", "Total Expenses", "% Income/Expenses"],
+            "Current School Year": [format_currency(total_tuition_current), format_currency(total_expenses_current), f"{income_to_expenses_current}%"],
+            "Next School Year": [format_currency(total_tuition_next), format_currency(total_expenses_next), f"{income_to_expenses_next}%"]
+        })
 
-        # Save the comparison chart to an image file for PDF
+        st.subheader("Current vs Next School Year Comparison")
+        st.table(comparison_table)
+
+        # Save the comparison table to an image file for PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-            comparison_fig.write_image(temp_file.name)
-            comparison_chart_image = temp_file.name
+            comparison_table_image = temp_file.name
+            fig_table = go.Figure(data=[go.Table(
+                header=dict(values=list(comparison_table.columns),
+                            fill_color='paleturquoise',
+                            align='left'),
+                cells=dict(values=[comparison_table['Category'], comparison_table['Current School Year'], comparison_table['Next School Year']],
+                           fill_color='lavender',
+                           align='left'))
+            ])
+            fig_table.write_image(temp_file.name)
+            comparison_table_image = temp_file.name
 
         # Show the total results in a formatted table
         total_table = pd.DataFrame({
@@ -353,7 +362,7 @@ if st.button("Calculate New Tuition"):
         st.table(total_table)
 
         # Generate the downloadable PDF report
-        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_chart_image)
+        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image)
         
         # Create a download button for the PDF report
         st.download_button(

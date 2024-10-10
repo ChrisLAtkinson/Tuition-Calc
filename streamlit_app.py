@@ -191,8 +191,11 @@ else:
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
-roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=7.5)
-efficiency_rate = 2.08 / 100  # Fixed rate of efficiency
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=0.0)
+efficiency_rate = 2.08  # Fixed rate of efficiency
+
+# OTI calculation
+oti = roi_percentage + efficiency_rate
 
 # Step 6: Compensation Percentage
 st.subheader("Step 6: Enter Compensation as a Percentage of Expenses")
@@ -224,27 +227,20 @@ Tuition setting is a formula, not a conversation. That doesn’t make it easy. I
 # Expense Summary Variables
 total_expenses = 1555231
 new_expenses = 1697451
-oti = 7.50
-strategic_items = 1.6
-total_increase = 9.14
 
 expense_summary = f"""
 Total Expenses: {format_currency(total_expenses)}
-ROI plus RPI (OTI): {oti}%
-Strategic Items: {strategic_items}%
-Total Increase in Expenses: {total_increase}%
+ROI plus RPI (OTI): {oti:.2f}%
 New Expense Budget: {format_currency(new_expenses)}
 """
 
 # Comparison Variables for Current vs. Next School Year
 total_tuition_current = 1295422
 total_tuition_next = 1420361
-total_expenses_current = 1555231
-total_expenses_next = 1697451
 income_to_expenses_current = 83.29
 income_to_expenses_next = 83.68
 
-# Calculate new tuition with average increase
+# Calculate new tuition with OTI
 if st.button("Calculate New Tuition"):
     # Prevent division by zero or missing data issues
     if sum(num_students) == 0 or len(current_tuition) == 0:
@@ -254,8 +250,7 @@ if st.button("Calculate New Tuition"):
         total_students = sum(num_students)
         total_strategic_costs = sum(strategic_items_costs)  # Use the renamed list for summing strategic costs
 
-        adjusted_inflation = roi_percentage / 100 + efficiency_rate
-        total_new_tuition = total_current_tuition + (total_current_tuition * adjusted_inflation) + total_strategic_costs
+        total_new_tuition = sum([(tuition * (1 + oti / 100) + strategic_items_cost) * students for tuition, strategic_items_cost, students in zip(current_tuition, strategic_items_costs, num_students)])
         
         avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0
 
@@ -271,11 +266,11 @@ if st.button("Calculate New Tuition"):
         st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
         # Word summary of how the results were gathered
-        summary_text = """
+        summary_text = f"""
         ### Summary of Calculation:
         The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
-        The new tuition was calculated by applying an inflation rate (Rate of Inflation + 2.08% Efficiency Rate) to the total current tuition. 
-        Additionally, strategic costs were distributed across all students. The average tuition increase percentage was then applied to each grade.
+        The new tuition was calculated by applying the OTI (ROI + 2.08% efficiency) to the total current tuition, 
+        and strategic costs were added per student. The average tuition increase percentage was then applied to each grade. 
         The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
         """
         st.write(summary_text)
@@ -296,8 +291,8 @@ if st.button("Calculate New Tuition"):
 
         df = pd.DataFrame(tuition_data)
         df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
-        df["New Tuition per Student"] = [format_currency(tuition * (1 + avg_increase_percentage / 100)) for tuition in current_tuition]
-        df["Increase per Student"] = [format_currency((tuition * (1 + avg_increase_percentage / 100)) - tuition) for tuition in current_tuition]
+        df["New Tuition per Student"] = [format_currency(tuition * (1 + oti / 100)) for tuition in current_tuition]
+        df["Increase per Student"] = [format_currency((tuition * (1 + oti / 100)) - tuition) for tuition in current_tuition]
 
         # Show the table of results
         st.subheader("Tuition by Grade Level")

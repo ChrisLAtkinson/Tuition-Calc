@@ -100,13 +100,13 @@ if st.button("Calculate New Tuition"):
         tuition_data = {
             "Grade": grades,
             "Number of Students": num_students,
-            "Current Tuition per Student": current_tuition,
+            "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
         }
 
         df = pd.DataFrame(tuition_data)
-        df["Total Current Tuition"] = df["Number of Students"] * df["Current Tuition per Student"]
-        df["New Tuition per Student"] = df["Current Tuition per Student"] * (1 + avg_increase_percentage / 100)
-        df["Increase per Student"] = df["New Tuition per Student"] - df["Current Tuition per Student"]
+        df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
+        df["New Tuition per Student"] = [format_currency(tuition * (1 + avg_increase_percentage / 100)) for tuition in current_tuition]
+        df["Increase per Student"] = [format_currency((tuition * (1 + avg_increase_percentage / 100)) - tuition) for tuition in current_tuition]
 
         # Show the table of results
         st.subheader("Tuition by Grade Level")
@@ -115,8 +115,8 @@ if st.button("Calculate New Tuition"):
         # Plot graph for current and new tuition per grade
         st.subheader("Tuition Increase Graph")
         fig, ax = plt.subplots()
-        ax.bar(df["Grade"], df["Current Tuition per Student"], label="Current Tuition", color="skyblue")
-        ax.bar(df["Grade"], df["New Tuition per Student"], label="New Tuition", color="orange", alpha=0.7)
+        ax.bar(df["Grade"], [float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], label="Current Tuition", color="skyblue")
+        ax.bar(df["Grade"], [float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], label="New Tuition", color="orange", alpha=0.7)
         ax.set_ylabel("Tuition ($)")
         ax.set_title("Current vs New Tuition by Grade Level")
         plt.xticks(rotation=45)
@@ -142,4 +142,3 @@ if st.button("Calculate New Tuition"):
             "Cost ($)": [format_currency(cost) for cost in strategic_items]
         })
         st.write(strategic_costs_df)
-

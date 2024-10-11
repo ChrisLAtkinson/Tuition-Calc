@@ -195,20 +195,21 @@ ROI plus RPI (OTI): {oti:.2f}%
 New Expense Budget: {format_currency(previous_expenses * (1 + oti / 100))}
 """
 
-# Calculate new tuition with OTI
+# Calculate new tuition with a uniform average increase applied across all grades
 if st.button("Calculate New Tuition"):
     try:
         if sum(num_students) == 0 or len(current_tuition) == 0:
             st.error("Please provide valid inputs for all grade levels.")
         else:
-            # Ensure strategic costs per grade level
-            if len(strategic_items_costs) < len(current_tuition):
-                strategic_items_costs = [0.0] * len(current_tuition)
-
+            # Calculate total current tuition
             total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-            new_tuition_per_student = [(tuition * (1 + oti / 100) + cost) for tuition, cost in zip(current_tuition, strategic_items_costs)]
-            total_new_tuition = sum([nt * students for nt, students in zip(new_tuition_per_student, num_students)])
-            avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0.0
+            
+            # Calculate the new total tuition by applying the OTI increase
+            total_new_tuition = total_current_tuition * (1 + oti / 100)
+            
+            # Calculate the average increase per student
+            avg_increase_percentage = (oti / 100) * 100
+            new_tuition_per_student = [(tuition * (1 + oti / 100)) for tuition in current_tuition]
             tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
@@ -222,9 +223,8 @@ if st.button("Calculate New Tuition"):
             # Summary Text
             summary_text = f"""
             ### Summary of Calculation:
-            - Applied an OTI of {oti:.2f}% (ROI + 2.08%) to the current tuition.
-            - Added strategic costs per student.
-            - Calculated new tuition per student and total new tuition.
+            - Applied an OTI of {oti:.2f}% (ROI + 2.08%) uniformly to the current tuition for all grade levels.
+            - Calculated new tuition per student based on the uniform increase.
             - Calculated average tuition increase percentage and tuition assistance ratio.
             """
 
@@ -255,8 +255,14 @@ if st.button("Calculate New Tuition"):
             st.subheader("Strategic Items")
             st.write(strategic_items_df)
 
-            # Generate graphs and images
-            # [Graphs code here, ensuring that images are correctly saved and embedded]
+            # Plotly bar chart to compare current and new tuition
+            st.subheader("Interactive Tuition Increase Chart")
+            fig = go.Figure(data=[
+                go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
+                go.Bar(name='New Tuition', x=grades, y=[float(nt.replace('$', '').replace(',', '')) for nt in df["New Tuition per Student"]], marker_color='orange')
+            ])
+            fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
+            st.plotly_chart(fig)
 
             # Generate the PDF report
             pdf_buffer = generate_pdf(

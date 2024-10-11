@@ -6,7 +6,6 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-import tempfile
 import textwrap
 
 # Configure locale for currency formatting
@@ -167,13 +166,16 @@ previous_expenses = float(formatted_expenses.replace(",", "").replace("$", "")) 
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
-roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=0.0)
-efficiency_rate = 2.08  # Fixed rate of efficiency
-oti = roi_percentage + efficiency_rate
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
+rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
+oti = roi_percentage + rpi_percentage
+st.text(f"Operations Tuition Increase (OTI): {oti:.2f}%")
 
-# Step 6: Compensation Percentage
-st.subheader("Step 6: Enter Compensation as a Percentage of Expenses")
-compensation_percentage = st.number_input("Compensation Percentage (%)", min_value=0.0, max_value=100.0, step=0.01)
+# Step 6: Strategic Items (SI) Percentage
+st.subheader("Step 6: Strategic Items (SI) %")
+si_percentage = st.number_input("Strategic Items (SI) %", min_value=0.0, step=0.01, value=0.0)
+final_tuition_increase = oti + si_percentage
+st.text(f"Final Tuition Increase: {final_tuition_increase:.2f}%")
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
@@ -182,20 +184,7 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-# External link and quote
-link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
-csm_quote = """
-"The Christian school budget is a Kingdom document, a moral document, and an arithmetic document. Its primary purpose is to empower the school to deliver its mission with excellence (Kingdom). Its secondary purpose is to ensure that the school acts in a Christian way in all its actions and, in particular, in relation to its employees (moral). Its final purpose is to ensure that Trustees carry out their fiscal responsibility in balancing the school’s finances. In other words, it is not just a balance sheet or an audit statement. It is, rather, the expression of the mission and a clear statement of the priorities set by the school to fulfill that mission."
-"""
-
-# Expense Summary
-expense_summary = f"""
-Total Expenses: {format_currency(previous_expenses)}
-ROI plus RPI (OTI): {oti:.2f}%
-New Expense Budget: {format_currency(previous_expenses * (1 + oti / 100))}
-"""
-
-# Calculate new tuition with a uniform average increase applied across all grades
+# Step 8: Apply Final Tuition Increase to each Grade
 if st.button("Calculate New Tuition"):
     try:
         if sum(num_students) == 0 or len(current_tuition) == 0:
@@ -204,12 +193,11 @@ if st.button("Calculate New Tuition"):
             # Calculate total current tuition
             total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
             
-            # Calculate the new total tuition by applying the OTI increase
-            total_new_tuition = total_current_tuition * (1 + oti / 100)
+            # Calculate the new total tuition by applying the final increase
+            total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
             
             # Calculate the average increase per student
-            avg_increase_percentage = (oti / 100) * 100
-            new_tuition_per_student = [(tuition * (1 + oti / 100)) for tuition in current_tuition]
+            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
             tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
@@ -217,21 +205,8 @@ if st.button("Calculate New Tuition"):
             st.write(f"**Report Title:** {report_title}")
             st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
             st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-            st.write(f"**Average Tuition Increase Percentage:** {avg_increase_percentage:.2f}%")
+            st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
             st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-            # Summary Text
-            summary_text = f"""
-            ### Summary of Calculation:
-            - Applied an OTI of {oti:.2f}% (ROI + 2.08%) uniformly to the current tuition for all grade levels.
-            - Calculated new tuition per student based on the uniform increase.
-            - Calculated average tuition increase percentage and tuition assistance ratio.
-            """
-
-            st.write(summary_text)
-            st.markdown(f"**[External Link to the Article]({link})**")
-            st.subheader("Quote from Christian School Management")
-            st.write(csm_quote)
 
             # Create DataFrame for tuition by grade level
             tuition_data = {
@@ -267,8 +242,8 @@ if st.button("Calculate New Tuition"):
             # Generate the PDF report
             pdf_buffer = generate_pdf(
                 report_title, df, total_current_tuition, total_new_tuition,
-                avg_increase_percentage, tuition_assistance_ratio, strategic_items_df,
-                None, summary_text, csm_quote, link, expense_summary, None
+                final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+                None, "Summary of Calculations", "Christian School Management Quote", "https://example.com", "Expense Summary", None
             )
 
             # Download button for the PDF report

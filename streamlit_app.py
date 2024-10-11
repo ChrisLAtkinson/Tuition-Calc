@@ -192,7 +192,7 @@ oti = roi_percentage + efficiency_rate
 
 # Step 6: Compensation Percentage
 st.subheader("Step 6: Enter Compensation as a Percentage of Expenses")
-compensation_percentage = st.number_input("Compensation Percentage (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.01)
+compensation_percentage = st.number_input("Compensation Percentage (%)", min_value=0.0, max_value=100.0, value=None, step=0.01)
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")

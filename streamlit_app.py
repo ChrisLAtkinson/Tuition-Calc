@@ -5,7 +5,6 @@ import locale
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
 import tempfile
 import textwrap
@@ -106,33 +105,12 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition,
         pdf.drawString(50, row_y, line)
         row_y -= 15
 
-    # Add the Expense Summary
-    row_y -= 30
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, row_y, "Expense Summary:")
-    row_y -= 20
-    pdf.setFont("Helvetica", 10)
-    for line in wrap_text(expense_summary).split('\n'):
-        pdf.drawString(50, row_y, line)
-        row_y -= 15
-
-    # Embed images if available
-    try:
-        if graph_image:
-            pdf.drawImage(ImageReader(graph_image), 50, row_y - 250, width=500, height=200)
-            row_y -= 270
-        if comparison_table_image:
-            pdf.drawImage(ImageReader(comparison_table_image), 50, row_y - 250, width=500, height=200)
-            row_y -= 270
-    except Exception as e:
-        pdf.drawString(50, row_y, f"Could not include images due to: {str(e)}")
-
     # Finalize PDF
     pdf.save()
     buffer.seek(0)
     return buffer
 
-# Start of Streamlit app
+# Streamlit App Start
 st.title("Tuition Calculation Tool")
 
 # Step 1: Enter a Custom Title for the Report
@@ -171,11 +149,14 @@ for i in range(int(num_items)):
     strategic_item_names.append(item_name)
     strategic_items_costs.append(item_cost)
 
-# Ensure strategic items lists are not empty
-if not strategic_item_names:
-    strategic_item_names = ["No Strategic Items"]
-if not strategic_items_costs:
-    strategic_items_costs = [0.0]
+# Ensure lists have the same length before proceeding
+# If the number of strategic costs is less than the number of grades, pad the list with 0
+while len(strategic_items_costs) < len(grades):
+    strategic_items_costs.append(0.0)
+
+# Ensure strategic item names list is filled to match length of grades
+while len(strategic_item_names) < len(grades):
+    strategic_item_names.append("No Strategic Item")
 
 # Step 4: Previous Year's Expense Budget
 st.subheader("Step 4: Enter the Previous Year's Total Expenses")
@@ -192,7 +173,7 @@ oti = roi_percentage + efficiency_rate
 
 # Step 6: Compensation Percentage
 st.subheader("Step 6: Enter Compensation as a Percentage of Expenses")
-compensation_percentage = st.number_input("Compensation Percentage (%)", min_value=0.0, max_value=100.0, value=None, step=0.01)
+compensation_percentage = st.number_input("Compensation Percentage (%)", min_value=0.0, max_value=100.0, step=0.01)
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
@@ -204,7 +185,7 @@ financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
 # External link and quote
 link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
 csm_quote = """
-[Include the quote here]
+"The Christian school budget is a Kingdom document, a moral document, and an arithmetic document. Its primary purpose is to empower the school to deliver its mission with excellence (Kingdom). Its secondary purpose is to ensure that the school acts in a Christian way in all its actions and, in particular, in relation to its employees (moral). Its final purpose is to ensure that Trustees carry out their fiscal responsibility in balancing the school’s finances. In other words, it is not just a balance sheet or an audit statement. It is, rather, the expression of the mission and a clear statement of the priorities set by the school to fulfill that mission."
 """
 
 # Expense Summary
@@ -222,9 +203,7 @@ if st.button("Calculate New Tuition"):
         else:
             # Ensure strategic costs per grade level
             if len(strategic_items_costs) < len(current_tuition):
-                strategic_items_costs = [sum(strategic_items_costs) / len(current_tuition)] * len(current_tuition)
-            else:
-                strategic_items_costs = strategic_items_costs[:len(current_tuition)]
+                strategic_items_costs = [0.0] * len(current_tuition)
 
             total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
             new_tuition_per_student = [(tuition * (1 + oti / 100) + cost) for tuition, cost in zip(current_tuition, strategic_items_costs)]
@@ -269,8 +248,8 @@ if st.button("Calculate New Tuition"):
 
             # Create strategic items DataFrame
             strategic_items_df = pd.DataFrame({
-                "Strategic Item": strategic_item_names,
-                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]
+                "Strategic Item": strategic_item_names[:len(grades)],  # Ensure lengths match grades
+                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs[:len(grades)]]
             })
 
             st.subheader("Strategic Items")

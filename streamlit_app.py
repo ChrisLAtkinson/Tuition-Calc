@@ -27,6 +27,7 @@ def format_input_as_currency(input_value):
         value = float(input_value)
         return f"${value:,.2f}"
     except ValueError:
+        st.error(f"Invalid currency input: {input_value}")
         return ""
 
 # Function to wrap long text for the PDF
@@ -242,127 +243,132 @@ income_to_expenses_next = 83.68
 
 # Calculate new tuition with OTI
 if st.button("Calculate New Tuition"):
-    # Prevent division by zero or missing data issues
-    if sum(num_students) == 0 or len(current_tuition) == 0:
-        st.error("Please provide valid inputs for all grade levels.")
-    else:
-        total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-        total_students = sum(num_students)
-        total_strategic_costs = sum(strategic_items_costs)  # Use the renamed list for summing strategic costs
+    try:
+        if sum(num_students) == 0 or len(current_tuition) == 0:
+            st.error("Please provide valid inputs for all grade levels.")
+        else:
+            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+            total_students = sum(num_students)
+            total_strategic_costs = sum(strategic_items_costs)
 
-        total_new_tuition = sum([(tuition * (1 + oti / 100) + strategic_items_cost) * students for tuition, strategic_items_cost, students in zip(current_tuition, strategic_items_costs, num_students)])
-        
-        avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0
+            # Calculate new tuition per student
+            new_tuition_per_student = [(tuition * (1 + oti / 100) + cost) for tuition, cost in zip(current_tuition, strategic_items_costs)]
 
-        # Calculate tuition assistance ratio
-        tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0
+            total_new_tuition = sum([nt * students for nt, students in zip(new_tuition_per_student, num_students)])
+            
+            avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0
 
-        # Display Results
-        st.subheader("Results")
-        st.write(f"**Report Title:** {report_title}")
-        st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-        st.write(f"**Total New Tuition (with average increase):** {format_currency(total_new_tuition)}")
-        st.write(f"**Average Tuition Increase Percentage:** {avg_increase_percentage:.2f}%")
-        st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+            # Calculate tuition assistance ratio
+            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0
 
-        # Word summary of how the results were gathered
-        summary_text = f"""
-        ### Summary of Calculation:
-        The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
-        The new tuition was calculated by applying the OTI (ROI + 2.08% efficiency) to the total current tuition, 
-        and strategic costs were added per student. The average tuition increase percentage was then applied to each grade. 
-        The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
-        """
-        st.write(summary_text)
+            # Display Results
+            st.subheader("Results")
+            st.write(f"**Report Title:** {report_title}")
+            st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+            st.write(f"**Total New Tuition (with average increase):** {format_currency(total_new_tuition)}")
+            st.write(f"**Average Tuition Increase Percentage:** {avg_increase_percentage:.2f}%")
+            st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-        # Include the link before the Christian School Management quote
-        st.markdown(f"**[External Link to the Article]({link})**")
+            # Word summary of how the results were gathered
+            summary_text = f"""
+            ### Summary of Calculation:
+            The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
+            The new tuition was calculated by applying the OTI (ROI + 2.08% efficiency) to the total current tuition, 
+            and strategic costs were added per student. The average tuition increase percentage was then applied to each grade. 
+            The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
+            """
+            st.write(summary_text)
 
-        # Include the Christian School Management quote
-        st.subheader("Quote from Christian School Management")
-        st.write(csm_quote)
+            # Include the link before the Christian School Management quote
+            st.markdown(f"**[External Link to the Article]({link})**")
 
-        # Create a DataFrame for the tuition by grade level
-        tuition_data = {
-            "Grade": grades,
-            "Number of Students": num_students,
-            "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-        }
+            # Include the Christian School Management quote
+            st.subheader("Quote from Christian School Management")
+            st.write(csm_quote)
 
-        df = pd.DataFrame(tuition_data)
-        df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
-        df["New Tuition per Student"] = [format_currency(tuition * (1 + oti / 100)) for tuition in current_tuition]
-        df["Increase per Student"] = [format_currency((tuition * (1 + oti / 100)) - tuition) for tuition in current_tuition]
+            # Create a DataFrame for the tuition by grade level
+            tuition_data = {
+                "Grade": grades,
+                "Number of Students": num_students,
+                "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
+            }
 
-        # Show the table of results
-        st.subheader("Tuition by Grade Level")
-        st.write(df)
+            df = pd.DataFrame(tuition_data)
+            df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
+            df["New Tuition per Student"] = [format_currency(nt) for nt in new_tuition_per_student]
+            df["Increase per Student"] = [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
 
-        # Show strategic items with names and costs
-        st.subheader("Strategic Items")
-        strategic_items_df = pd.DataFrame({
-            "Strategic Item": strategic_item_names,
-            "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]  # Use the renamed list here
-        })
-        st.write(strategic_items_df)
+            # Show the table of results
+            st.subheader("Tuition by Grade Level")
+            st.write(df)
 
-        # Create an interactive side-by-side bar graph using Plotly
-        st.subheader("Interactive Tuition Increase Graph")
-        fig = go.Figure(data=[
-            go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
-            go.Bar(name='New Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["New Tuition per Student"]], marker_color='orange')
-        ])
-        # Change the bar mode
-        fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
-        st.plotly_chart(fig)
+            # Show strategic items with names and costs
+            st.subheader("Strategic Items")
+            strategic_items_df = pd.DataFrame({
+                "Strategic Item": strategic_item_names,
+                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]
+            })
+            st.write(strategic_items_df)
 
-        # Save the tuition graph to an image file for PDF
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-            fig.write_image(temp_file.name)
-            graph_image = temp_file.name
-
-        # Create a comparison table (chart) for Total Tuition, Total Expenses, and % Income/Expenses
-        comparison_table = pd.DataFrame({
-            "Category": ["Total Tuition and Fees", "Total Expenses", "% Income/Expenses"],
-            "Current School Year": [format_currency(total_tuition_current), format_currency(total_expenses_current), f"{income_to_expenses_current}%"],
-            "Next School Year": [format_currency(total_tuition_next), format_currency(total_expenses_next), f"{income_to_expenses_next}%"]
-        })
-
-        st.subheader("Current vs Next School Year Comparison")
-        st.table(comparison_table)
-
-        # Save the comparison table to an image file for PDF
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-            comparison_table_image = temp_file.name
-            fig_table = go.Figure(data=[go.Table(
-                header=dict(values=list(comparison_table.columns),
-                            fill_color='paleturquoise',
-                            align='left'),
-                cells=dict(values=[comparison_table['Category'], comparison_table['Current School Year'], comparison_table['Next School Year']],
-                           fill_color='lavender',
-                           align='left'))
+            # Create an interactive side-by-side bar graph using Plotly
+            st.subheader("Interactive Tuition Increase Graph")
+            fig = go.Figure(data=[
+                go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
+                go.Bar(name='New Tuition', x=grades, y=[float(nt.replace('$', '').replace(',', '')) for nt in df["New Tuition per Student"]], marker_color='orange')
             ])
-            fig_table.write_image(temp_file.name)
-            comparison_table_image = temp_file.name
+            # Change the bar mode
+            fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
+            st.plotly_chart(fig)
 
-        # Show the total results in a formatted table
-        total_table = pd.DataFrame({
-            "Total Current Tuition": [format_currency(total_current_tuition)],
-            "Total New Tuition": [format_currency(total_new_tuition)],
-            "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
-            "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
-        })
+            # Save the tuition graph to an image file for PDF
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+                fig.write_image(temp_file.name)
+                graph_image = temp_file.name
 
-        st.subheader("Overall Summary")
-        st.table(total_table)
+            # Create a comparison table (chart) for Total Tuition, Total Expenses, and % Income/Expenses
+            comparison_table = pd.DataFrame({
+                "Category": ["Total Tuition and Fees", "Total Expenses", "% Income/Expenses"],
+                "Current School Year": [format_currency(total_tuition_current), format_currency(total_expenses_current), f"{income_to_expenses_current}%"],
+                "Next School Year": [format_currency(total_tuition_next), format_currency(total_expenses_next), f"{income_to_expenses_next}%"]
+            })
 
-        # Generate the downloadable PDF report
-        pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image)
-        
-        # Create a download button for the PDF report
-        st.download_button(
-            label="Download Report as PDF",
-            data=pdf_buffer,
-            file_name="tuition_report.pdf",
-            mime="application/pdf"
-        )
+            st.subheader("Current vs Next School Year Comparison")
+            st.table(comparison_table)
+
+            # Save the comparison table to an image file for PDF
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+                comparison_table_image = temp_file.name
+                fig_table = go.Figure(data=[go.Table(
+                    header=dict(values=list(comparison_table.columns),
+                                fill_color='paleturquoise',
+                                align='left'),
+                    cells=dict(values=[comparison_table['Category'], comparison_table['Current School Year'], comparison_table['Next School Year']],
+                               fill_color='lavender',
+                               align='left'))
+                ])
+                fig_table.write_image(temp_file.name)
+                comparison_table_image = temp_file.name
+
+            # Show the total results in a formatted table
+            total_table = pd.DataFrame({
+                "Total Current Tuition": [format_currency(total_current_tuition)],
+                "Total New Tuition": [format_currency(total_new_tuition)],
+                "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
+                "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
+            })
+
+            st.subheader("Overall Summary")
+            st.table(total_table)
+
+            # Generate the downloadable PDF report
+            pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image)
+            
+            # Create a download button for the PDF report
+            st.download_button(
+                label="Download Report as PDF",
+                data=pdf_buffer,
+                file_name="tuition_report.pdf",
+                mime="application/pdf"
+            )
+    except Exception as e:
+        st.error(f"An error occurred during calculation: {str(e)}")

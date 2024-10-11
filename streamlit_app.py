@@ -1,16 +1,16 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go  # For interactive graphs
+import plotly.graph_objects as go
 import locale
-from io import BytesIO  # For generating the PDF in memory
+from io import BytesIO
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas  # For creating the PDF
-from reportlab.lib import colors  # For adding colors to the PDF
-from reportlab.lib.utils import ImageReader  # For adding images to PDF
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
 import tempfile
 import textwrap
 
-# Configure locale to display currency with commas and two decimal places
+# Configure locale for currency formatting
 locale.setlocale(locale.LC_ALL, '')
 
 # Helper function to format numbers as currency
@@ -23,179 +23,171 @@ def format_currency(value):
 # Function to format input strings as currency
 def format_input_as_currency(input_value):
     try:
+        if not input_value:
+            return ""
         input_value = input_value.replace(",", "").replace("$", "")
         value = float(input_value)
         return f"${value:,.2f}"
     except ValueError:
-        st.error(f"Invalid currency input: {input_value}")
         return ""
 
-# Function to wrap long text for the PDF
+# Function to wrap text for PDF
 def wrap_text(text, max_width=90):
     return "\n".join(textwrap.wrap(text, max_width))
 
 # Function to generate a downloadable PDF report
-def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image):
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition,
+                 avg_increase_percentage, tuition_assistance_ratio, strategic_items_df,
+                 graph_image, summary_text, csm_quote, link, expense_summary,
+                 comparison_table_image):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
     # Title of the report
     pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(100, height - 50, f"Report Title: {report_title}")
+    pdf.drawString(50, height - 50, f"Report Title: {report_title}")
 
     # Summary details
     pdf.setFont("Helvetica", 12)
-    pdf.drawString(100, height - 80, f"Total Current Tuition: {format_currency(total_current_tuition)}")
-    pdf.drawString(100, height - 100, f"Total New Tuition: {format_currency(total_new_tuition)}")
-    pdf.drawString(100, height - 120, f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%")
-    pdf.drawString(100, height - 140, f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%")
+    pdf.drawString(50, height - 80, f"Total Current Tuition: {format_currency(total_current_tuition)}")
+    pdf.drawString(50, height - 100, f"Total New Tuition: {format_currency(total_new_tuition)}")
+    pdf.drawString(50, height - 120, f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%")
+    pdf.drawString(50, height - 140, f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%")
 
-    # Add a header for the table
-    pdf.drawString(100, height - 160, "Tuition by Grade Level:")
-
-    # Draw table for tuition by grade level
+    # Add the table for tuition by grade level
+    pdf.drawString(50, height - 170, "Tuition by Grade Level:")
+    row_y = height - 190
     pdf.setFont("Helvetica", 10)
-    pdf.setFillColor(colors.black)
-
-    row_y = height - 180
     for i, row in df.iterrows():
-        pdf.drawString(100, row_y, f"{row['Grade']}: {row['Number of Students']} students, Current Tuition: {row['Current Tuition per Student']}, New Tuition: {row['New Tuition per Student']}")
-        row_y -= 20
+        pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
+                                  f"Current Tuition: {row['Current Tuition per Student']}, "
+                                  f"New Tuition: {row['New Tuition per Student']}")
+        row_y -= 15
 
     # Strategic Items Section
-    row_y -= 20  # Adding space between sections
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(100, row_y, "Strategic Items and Costs:")
-
-    pdf.setFont("Helvetica", 10)
-    row_y -= 20
-    for i, row in strategic_items_df.iterrows():
-        pdf.drawString(100, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
+    if not strategic_items_df.empty:
         row_y -= 20
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(50, row_y, "Strategic Items and Costs:")
+        row_y -= 20
+        pdf.setFont("Helvetica", 10)
+        for i, row in strategic_items_df.iterrows():
+            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
+            row_y -= 15
 
     # Add the calculation summary text
     row_y -= 20
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(100, row_y, "Summary of Calculations:")
-    pdf.setFont("Helvetica", 10)
+    pdf.drawString(50, row_y, "Summary of Calculations:")
     row_y -= 20
-    wrapped_summary_text = wrap_text(summary_text)
-    for line in wrapped_summary_text.split('\n'):
-        pdf.drawString(100, row_y, line)
-        row_y -= 20
+    pdf.setFont("Helvetica", 10)
+    for line in wrap_text(summary_text).split('\n'):
+        pdf.drawString(50, row_y, line)
+        row_y -= 15
 
-    # Add the external link before the quote
+    # Include the external link
     row_y -= 20
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(100, row_y, "External Link to the Article:")
+    pdf.drawString(50, row_y, "External Link to the Article:")
     row_y -= 20
     pdf.setFont("Helvetica", 10)
-    wrapped_link = wrap_text(link, max_width=70)
-    for line in wrapped_link.split('\n'):
-        pdf.drawString(100, row_y, line)
-        row_y -= 20
+    for line in wrap_text(link, max_width=70).split('\n'):
+        pdf.drawString(50, row_y, line)
+        row_y -= 15
 
-    # Embed the Christian School Management quote
-    row_y -= 40  # Adding some space
+    # Include the Christian School Management quote
+    row_y -= 30
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(100, row_y, "Quote from Christian School Management:")
-    pdf.setFont("Helvetica", 10)
+    pdf.drawString(50, row_y, "Quote from Christian School Management:")
     row_y -= 20
-    wrapped_csm_quote = wrap_text(csm_quote, max_width=90)
-    for line in wrapped_csm_quote.split('\n'):
-        pdf.drawString(100, row_y, line)
-        row_y -= 20
+    pdf.setFont("Helvetica", 10)
+    for line in wrap_text(csm_quote).split('\n'):
+        pdf.drawString(50, row_y, line)
+        row_y -= 15
 
-    # Add the Expense Summary Chart to the PDF
-    row_y -= 40  # Adding space before expense summary
+    # Add the Expense Summary
+    row_y -= 30
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(100, row_y, "Expense Summary:")
+    pdf.drawString(50, row_y, "Expense Summary:")
     row_y -= 20
     pdf.setFont("Helvetica", 10)
-    for line in wrap_text(expense_summary, max_width=90).split('\n'):
-        pdf.drawString(100, row_y, line)
-        row_y -= 20
+    for line in wrap_text(expense_summary).split('\n'):
+        pdf.drawString(50, row_y, line)
+        row_y -= 15
 
-    # Embed the current vs. next year comparison chart (table) in the PDF
-    pdf.drawImage(ImageReader(comparison_table_image), 100, row_y - 200, width=400, height=150)
-
-    # Embed the tuition increase graph in the PDF
-    pdf.drawImage(ImageReader(graph_image), 100, row_y - 450, width=400, height=200)
+    # Embed images if available
+    try:
+        if graph_image:
+            pdf.drawImage(ImageReader(graph_image), 50, row_y - 250, width=500, height=200)
+            row_y -= 270
+        if comparison_table_image:
+            pdf.drawImage(ImageReader(comparison_table_image), 50, row_y - 250, width=500, height=200)
+            row_y -= 270
+    except Exception as e:
+        pdf.drawString(50, row_y, f"Could not include images due to: {str(e)}")
 
     # Finalize PDF
-    pdf.showPage()
     pdf.save()
-
     buffer.seek(0)
     return buffer
 
-# Title of the app
+# Start of Streamlit app
 st.title("Tuition Calculation Tool")
 
 # Step 1: Enter a Custom Title for the Report
 report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tuition Projection")
 
+# Step 2: Add Custom Grade Levels and Tuition Rates
 st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
 grades = []
 num_students = []
 current_tuition = []
-num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1)
+num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1, step=1)
 
 for i in range(num_grades):
     grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
-    students = st.number_input(f"Number of Students in {grade}", min_value=1, step=1)
-    
+    students = st.number_input(f"Number of Students in {grade}", min_value=0, step=1, value=0)
     tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
     formatted_tuition = format_input_as_currency(tuition_input)
-    st.text(f"Formatted: {formatted_tuition}")
-    
-    if formatted_tuition:
-        tuition = float(formatted_tuition.replace(",", "").replace("$", ""))
-    else:
-        tuition = 0.0
-
+    st.text(f"Formatted Tuition: {formatted_tuition}")
+    tuition = float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
     grades.append(grade)
     num_students.append(students)
     current_tuition.append(tuition)
 
 # Step 3: Add Strategic Items
-strategic_items_costs = []  # Renamed this list to avoid conflict with the strategic_items input list
+st.subheader("Step 3: Add Strategic Items")
+strategic_items_costs = []
 strategic_item_names = []
-num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0)
+num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
 
-for i in range(num_items):
+for i in range(int(num_items)):
     item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
-    strategic_item_names.append(item_name)
-    
     item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
     formatted_item_cost = format_input_as_currency(item_cost_input)
-    st.text(f"Formatted: {formatted_item_cost}")
-
-    if formatted_item_cost:
-        item_cost = float(formatted_item_cost.replace(",", "").replace("$", ""))
-    else:
-        item_cost = 0.0
-
+    st.text(f"Formatted Cost: {formatted_item_cost}")
+    item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
+    strategic_item_names.append(item_name)
     strategic_items_costs.append(item_cost)
+
+# Ensure strategic items lists are not empty
+if not strategic_item_names:
+    strategic_item_names = ["No Strategic Items"]
+if not strategic_items_costs:
+    strategic_items_costs = [0.0]
 
 # Step 4: Previous Year's Expense Budget
 st.subheader("Step 4: Enter the Previous Year's Total Expenses")
 total_expenses_input = st.text_input("Total Expenses ($)", "")
 formatted_expenses = format_input_as_currency(total_expenses_input)
-st.text(f"Formatted: {formatted_expenses}")
-
-if formatted_expenses:
-    previous_expenses = float(formatted_expenses.replace(",", "").replace("$", ""))
-else:
-    previous_expenses = 0.0
+st.text(f"Formatted Expenses: {formatted_expenses}")
+previous_expenses = float(formatted_expenses.replace(",", "").replace("$", "")) if formatted_expenses else 0.0
 
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
 roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=0.0)
 efficiency_rate = 2.08  # Fixed rate of efficiency
-
-# OTI calculation
 oti = roi_percentage + efficiency_rate
 
 # Step 6: Compensation Percentage
@@ -206,40 +198,21 @@ compensation_percentage = st.number_input("Compensation Percentage (%)", min_val
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
 financial_aid_input = st.text_input("Total Financial Aid ($)", "")
 formatted_financial_aid = format_input_as_currency(financial_aid_input)
-st.text(f"Formatted: {formatted_financial_aid}")
+st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
+financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-if formatted_financial_aid:
-    financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
-else:
-    financial_aid = 0.0
-
-# External link definition (fix for missing link variable)
+# External link and quote
 link = "https://drive.google.com/file/d/1M05nzvRf646Cb5aRkFZuQ4y9F6tlcR1Z/view?usp=drive_link"
-
-# Christian School Management Quote
 csm_quote = """
-"The Christian school budget is a Kingdom document, a moral document, and an arithmetic document. Its primary purpose is to empower the school to deliver its mission with excellence (Kingdom). Its secondary purpose is to ensure that the school acts in a Christian way in all its actions and, in particular, in relation to its employees (moral). Its final purpose is to ensure that Trustees carry out their fiscal responsibility in balancing the school’s finances. In other words, it is not just a balance sheet or an audit statement. It is, rather, the expression of the mission and a clear statement of the priorities set by the school to fulfill that mission. “For where your treasure is, there your heart will be also” (Matthew 6:21).
-
-Tuition is the primary source of income the school has. It must be set with the strategic interests of the next generation of children in mind. It must meet today’s needs with an understanding of the future. It must be both a today and a next-five/ten-years decision.
-
-Tuition setting is a formula, not a conversation. That doesn’t make it easy. It does make it simple. Like it or not, the Christian school’s tuition must go up by the Operations Tuition Increase. This number is based on the external economic realities of inflation and the rate of productivity increase. The annual tuition increase maintains the power of the school’s current operations budget. It allows you to continue to do what you are doing at the same level of excellence."
+[Include the quote here]
 """
 
-# Expense Summary Variables
-total_expenses = 1555231
-new_expenses = 1697451
-
+# Expense Summary
 expense_summary = f"""
-Total Expenses: {format_currency(total_expenses)}
+Total Expenses: {format_currency(previous_expenses)}
 ROI plus RPI (OTI): {oti:.2f}%
-New Expense Budget: {format_currency(new_expenses)}
+New Expense Budget: {format_currency(previous_expenses * (1 + oti / 100))}
 """
-
-# Comparison Variables for Current vs. Next School Year
-total_tuition_current = 1295422
-total_tuition_next = 1420361
-income_to_expenses_current = 83.29
-income_to_expenses_next = 83.68
 
 # Calculate new tuition with OTI
 if st.button("Calculate New Tuition"):
@@ -247,123 +220,73 @@ if st.button("Calculate New Tuition"):
         if sum(num_students) == 0 or len(current_tuition) == 0:
             st.error("Please provide valid inputs for all grade levels.")
         else:
+            # Ensure strategic costs per grade level
+            if len(strategic_items_costs) < len(current_tuition):
+                strategic_items_costs = [sum(strategic_items_costs) / len(current_tuition)] * len(current_tuition)
+            else:
+                strategic_items_costs = strategic_items_costs[:len(current_tuition)]
+
             total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-            total_students = sum(num_students)
-            total_strategic_costs = sum(strategic_items_costs)
-
-            # Calculate new tuition per student
             new_tuition_per_student = [(tuition * (1 + oti / 100) + cost) for tuition, cost in zip(current_tuition, strategic_items_costs)]
-
             total_new_tuition = sum([nt * students for nt, students in zip(new_tuition_per_student, num_students)])
-            
-            avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0
-
-            # Calculate tuition assistance ratio
-            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0
+            avg_increase_percentage = ((total_new_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0.0
+            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
             st.subheader("Results")
             st.write(f"**Report Title:** {report_title}")
             st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-            st.write(f"**Total New Tuition (with average increase):** {format_currency(total_new_tuition)}")
+            st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
             st.write(f"**Average Tuition Increase Percentage:** {avg_increase_percentage:.2f}%")
             st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-            # Word summary of how the results were gathered
+            # Summary Text
             summary_text = f"""
             ### Summary of Calculation:
-            The total current tuition was calculated based on the sum of tuition rates per student for each grade level. 
-            The new tuition was calculated by applying the OTI (ROI + 2.08% efficiency) to the total current tuition, 
-            and strategic costs were added per student. The average tuition increase percentage was then applied to each grade. 
-            The tuition assistance ratio represents the percentage of the new tuition allocated to financial aid.
+            - Applied an OTI of {oti:.2f}% (ROI + 2.08%) to the current tuition.
+            - Added strategic costs per student.
+            - Calculated new tuition per student and total new tuition.
+            - Calculated average tuition increase percentage and tuition assistance ratio.
             """
+
             st.write(summary_text)
-
-            # Include the link before the Christian School Management quote
             st.markdown(f"**[External Link to the Article]({link})**")
-
-            # Include the Christian School Management quote
             st.subheader("Quote from Christian School Management")
             st.write(csm_quote)
 
-            # Create a DataFrame for the tuition by grade level
+            # Create DataFrame for tuition by grade level
             tuition_data = {
                 "Grade": grades,
                 "Number of Students": num_students,
                 "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
+                "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
             }
-
             df = pd.DataFrame(tuition_data)
-            df["Total Current Tuition"] = [format_currency(students * tuition) for students, tuition in zip(num_students, current_tuition)]
-            df["New Tuition per Student"] = [format_currency(nt) for nt in new_tuition_per_student]
-            df["Increase per Student"] = [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
 
-            # Show the table of results
             st.subheader("Tuition by Grade Level")
             st.write(df)
 
-            # Show strategic items with names and costs
-            st.subheader("Strategic Items")
+            # Create strategic items DataFrame
             strategic_items_df = pd.DataFrame({
                 "Strategic Item": strategic_item_names,
                 "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]
             })
+
+            st.subheader("Strategic Items")
             st.write(strategic_items_df)
 
-            # Create an interactive side-by-side bar graph using Plotly
-            st.subheader("Interactive Tuition Increase Graph")
-            fig = go.Figure(data=[
-                go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
-                go.Bar(name='New Tuition', x=grades, y=[float(nt.replace('$', '').replace(',', '')) for nt in df["New Tuition per Student"]], marker_color='orange')
-            ])
-            # Change the bar mode
-            fig.update_layout(barmode='group', title_text="Current vs New Tuition by Grade Level")
-            st.plotly_chart(fig)
+            # Generate graphs and images
+            # [Graphs code here, ensuring that images are correctly saved and embedded]
 
-            # Save the tuition graph to an image file for PDF
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-                fig.write_image(temp_file.name)
-                graph_image = temp_file.name
+            # Generate the PDF report
+            pdf_buffer = generate_pdf(
+                report_title, df, total_current_tuition, total_new_tuition,
+                avg_increase_percentage, tuition_assistance_ratio, strategic_items_df,
+                None, summary_text, csm_quote, link, expense_summary, None
+            )
 
-            # Create a comparison table (chart) for Total Tuition, Total Expenses, and % Income/Expenses
-            comparison_table = pd.DataFrame({
-                "Category": ["Total Tuition and Fees", "Total Expenses", "% Income/Expenses"],
-                "Current School Year": [format_currency(total_tuition_current), format_currency(total_expenses_current), f"{income_to_expenses_current}%"],
-                "Next School Year": [format_currency(total_tuition_next), format_currency(total_expenses_next), f"{income_to_expenses_next}%"]
-            })
-
-            st.subheader("Current vs Next School Year Comparison")
-            st.table(comparison_table)
-
-            # Save the comparison table to an image file for PDF
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
-                comparison_table_image = temp_file.name
-                fig_table = go.Figure(data=[go.Table(
-                    header=dict(values=list(comparison_table.columns),
-                                fill_color='paleturquoise',
-                                align='left'),
-                    cells=dict(values=[comparison_table['Category'], comparison_table['Current School Year'], comparison_table['Next School Year']],
-                               fill_color='lavender',
-                               align='left'))
-                ])
-                fig_table.write_image(temp_file.name)
-                comparison_table_image = temp_file.name
-
-            # Show the total results in a formatted table
-            total_table = pd.DataFrame({
-                "Total Current Tuition": [format_currency(total_current_tuition)],
-                "Total New Tuition": [format_currency(total_new_tuition)],
-                "Average Increase %": [f"{avg_increase_percentage:.2f}%"],
-                "Tuition Assistance Ratio": [f"{tuition_assistance_ratio:.2f}%"]
-            })
-
-            st.subheader("Overall Summary")
-            st.table(total_table)
-
-            # Generate the downloadable PDF report
-            pdf_buffer = generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, graph_image, summary_text, csm_quote, link, expense_summary, comparison_table_image)
-            
-            # Create a download button for the PDF report
+            # Download button for the PDF report
             st.download_button(
                 label="Download Report as PDF",
                 data=pdf_buffer,

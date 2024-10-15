@@ -85,6 +85,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
 st.title("Tuition Calculation Tool")
 
 # Step 1: Enter a Custom Title for the Report
+st.subheader("Step 1: Enter a Custom Title for the Report")
 report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tuition Projection")
 
 # Step 2: Add Custom Grade Levels and Tuition Rates
@@ -106,6 +107,7 @@ for i in range(num_grades):
     current_tuition.append(tuition)
 
 # Step 3: Automatically Calculate Average Tuition
+st.subheader("Step 3: Automatically Calculate Average Tuition")
 if sum(num_students) > 0:
     total_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
     avg_tuition = total_tuition / sum(num_students)
@@ -151,6 +153,7 @@ oti = roi_percentage + rpi_percentage
 st.text(f"Operations Tuition Increase (OTI): {oti:.2f}%")
 
 # Step 8: Automatically Calculate Strategic Items (SI) Percentage
+st.subheader("Step 8: Automatically Calculate Strategic Items (SI) Percentage")
 total_strategic_items_cost = sum(strategic_items_costs)
 num_total_students = sum(num_students)
 
@@ -163,6 +166,7 @@ else:
 st.text(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 
 # Step 9: Calculate Final Tuition Increase
+st.subheader("Step 9: Calculate Final Tuition Increase")
 final_tuition_increase = oti + si_percentage
 st.text(f"Final Tuition Increase: {final_tuition_increase:.2f}%")
 

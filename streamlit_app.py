@@ -138,22 +138,27 @@ formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
 st.text(f"Formatted Previous Expenses: {formatted_previous_expenses}")
 previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", "")) if formatted_previous_expenses else 0.0
 
-# Step 6: Additional Income
-st.subheader("Step 6: Additional Income")
+# Step 6: Additional Income (Fundraising to Offset Expenses)
+st.subheader("Step 6: Additional Income (Fundraising to Offset Expenses)")
 additional_income_input = st.text_input("Additional Income (Fundraising, Grants, etc.) ($)", "")
 formatted_additional_income = format_input_as_currency(additional_income_input)
 st.text(f"Formatted Additional Income: {formatted_additional_income}")
 additional_income = float(formatted_additional_income.replace(",", "").replace("$", "")) if formatted_additional_income else 0.0
 
-# Step 7: Operations Tuition Increase (OTI) Calculation
-st.subheader("Step 7: Operations Tuition Increase (OTI) Calculation")
+# Step 7: Adjusted Expenses for Next Year
+st.subheader("Step 7: Adjusted Expenses for Next Year (After Accounting for Fundraising)")
+adjusted_expenses = previous_expenses - additional_income
+st.text(f"Adjusted Expenses for Next Year: {format_currency(adjusted_expenses)}")
+
+# Step 8: Operations Tuition Increase (OTI) Calculation
+st.subheader("Step 8: Operations Tuition Increase (OTI) Calculation")
 roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
 rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
 oti = roi_percentage + rpi_percentage
 st.text(f"Operations Tuition Increase (OTI): {oti:.2f}%")
 
-# Step 8: Automatically Calculate Strategic Items (SI) Percentage
-st.subheader("Step 8: Automatically Calculate Strategic Items (SI) Percentage")
+# Step 9: Automatically Calculate Strategic Items (SI) Percentage
+st.subheader("Step 9: Automatically Calculate Strategic Items (SI) Percentage")
 total_strategic_items_cost = sum(strategic_items_costs)
 num_total_students = sum(num_students)
 
@@ -165,103 +170,6 @@ else:
 
 st.text(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 
-# Step 9: Calculate Final Tuition Increase
-st.subheader("Step 9: Calculate Final Tuition Increase")
-final_tuition_increase = oti + si_percentage
-st.text(f"Final Tuition Increase: {final_tuition_increase:.2f}%")
-
-# Step 10: Financial Aid (Tuition Assistance) Calculation
-st.subheader("Step 10: Financial Aid (Tuition Assistance)")
-financial_aid_input = st.text_input("Total Financial Aid ($)", "")
-formatted_financial_aid = format_input_as_currency(financial_aid_input)
-st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
-financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
-
-# Calculate new tuition
-if st.button("Calculate New Tuition"):
-    try:
-        if sum(num_students) == 0 or len(current_tuition) == 0:
-            st.error("Please provide valid inputs for all grade levels.")
-        else:
-            # Calculate total current tuition
-            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-            
-            # Calculate the new total tuition by applying the final increase
-            total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-            
-            # Calculate the average increase per student
-            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
-            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
-
-            # Display Results
-            st.subheader("Results")
-            st.write(f"**Report Title:** {report_title}")
-            st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-            st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-            st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-            st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-            # Create DataFrame for tuition by grade level
-            tuition_data = {
-                "Grade": grades,
-                "Number of Students": num_students,
-                "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-                "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
-            }
-            df = pd.DataFrame(tuition_data)
-
-            st.subheader("Tuition by Grade Level")
-            st.write(df)
-
-            # Create strategic items DataFrame
-            strategic_items_df = pd.DataFrame({
-                "Strategic Item": strategic_item_names[:len(grades)],  # Ensure lengths match grades
-                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs[:len(grades)]]
-            })
-
-            st.subheader("Strategic Items")
-            st.write(strategic_items_df)
-
-            # Plotly bar chart to compare current and new tuition, including SI%
-            st.subheader("Interactive Tuition Increase Chart with SI%")
-            fig = go.Figure(data=[
-                go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
-                go.Bar(name='New Tuition with SI%', x=grades, y=[float(nt.replace('$', '').replace(',', '')) for nt in df["New Tuition per Student"]], marker_color='orange'),
-                go.Bar(name='SI % Increase', x=grades, y=[si_percentage] * len(grades), marker_color='lightgreen')
-            ])
-            fig.update_layout(barmode='group', title_text="Current vs New Tuition with SI% by Grade Level")
-            st.plotly_chart(fig)
-
-            # Summary of Calculation Steps (8th-grade reading level)
-            summary_text = f"""
-            1. We calculated the Operations Tuition Increase (OTI), which is based on the Rate of Inflation ({roi_percentage}%) and the Rate of Productivity Increase ({rpi_percentage}%). 
-            This ensures that tuition keeps up with inflation and stays competitive.
-            
-            2. We added costs for Strategic Items, which are improvements the school plans to make. This adds an extra {si_percentage:.2f}% to the tuition.
-            
-            3. The final tuition increase is the combination of OTI ({oti:.2f}%) and Strategic Items ({si_percentage:.2f}%). 
-            In this case, the total increase is {final_tuition_increase:.2f}%.
-            
-            4. We also considered any financial aid or additional income to ensure the tuition increase supports the overall budget.
-            """
-
-            st.subheader("Summary of Calculations")
-            st.write(summary_text)
-
-            # Generate the PDF report
-            pdf_buffer = generate_pdf(
-                report_title, df, total_current_tuition, total_new_tuition,
-                final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-                summary_text
-            )
-
-            # Download button for the PDF report
-            st.download_button(
-                label="Download Report as PDF",
-                data=pdf_buffer,
-                file_name="tuition_report.pdf",
-                mime="application/pdf"
-            )
-    except Exception as e:
-        st.error(f"An error occurred during calculation: {str(e)}")
+# Step 10: Calculate Final Tuition Increase
+st.subheader("Step 10: Calculate Final Tuition Increase")
+final_tuition_increase = oti +

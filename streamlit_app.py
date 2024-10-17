@@ -174,3 +174,10 @@ st.text(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 st.subheader("Step 10: Calculate Final Tuition Increase")
 final_tuition_increase = oti + si_percentage
 st.text(f"Final Tuition Increase: {final_tuition_increase:.2f}%")
+
+# Step 11: Financial Aid (Tuition Assistance) Calculation
+st.subheader("Step 11: Financial Aid (Tuition Assistance)")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
+financial_aid = float(formatted

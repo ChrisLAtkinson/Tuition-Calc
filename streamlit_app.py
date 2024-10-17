@@ -172,4 +172,5 @@ st.text(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 
 # Step 10: Calculate Final Tuition Increase
 st.subheader("Step 10: Calculate Final Tuition Increase")
-final_tuition_increase = oti +
+final_tuition_increase = oti + si_percentage
+st.text(f"Final Tuition Increase: {final_tuition_increase:.2f}%")

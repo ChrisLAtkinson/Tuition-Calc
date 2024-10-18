@@ -180,4 +180,82 @@ if st.button("Calculate New Tuition"):
             total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
             
             # Calculate the new total tuition by applying the final increase
-           
+            total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
+            
+            # Calculate the average increase per student
+            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+
+            # Display Results
+            st.subheader("Results")
+            st.write(f"**Report Title:** {report_title}")
+            st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+            st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+            st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+            st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+
+            # Create DataFrame for tuition by grade level
+            tuition_data = {
+                "Grade": grades,
+                "Number of Students": num_students,
+                "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
+                "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+            }
+            df = pd.DataFrame(tuition_data)
+
+            st.subheader("Tuition by Grade Level")
+            st.write(df)
+
+            # Create strategic items DataFrame
+            strategic_items_df = pd.DataFrame({
+                "Strategic Item": strategic_item_names[:len(grades)],  # Ensure lengths match grades
+                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs[:len(grades)]]
+            })
+
+            st.subheader("Strategic Items")
+            st.write(strategic_items_df)
+
+            # Plotly bar chart to compare current and new tuition, including SI%
+            st.subheader("Interactive Tuition Increase Chart with SI%")
+            fig = go.Figure(data=[
+                go.Bar(name='Current Tuition', x=grades, y=[float(tuition.replace('$', '').replace(',', '')) for tuition in df["Current Tuition per Student"]], marker_color='skyblue'),
+                go.Bar(name='New Tuition with SI%', x=grades, y=[float(nt.replace('$', '').replace(',', '')) for nt in df["New Tuition per Student"]], marker_color='orange'),
+                go.Bar(name='SI % Increase', x=grades, y=[si_percentage] * len(grades), marker_color='lightgreen')
+            ])
+            fig.update_layout(barmode='group', title_text="Current vs New Tuition with SI% by Grade Level")
+            st.plotly_chart(fig)
+
+            # Summary of Calculation Steps (Narrative)
+            summary_text = f"""
+            ### Summary of Calculations:
+            The tuition calculation for the 2025-26 school year was completed by considering several key factors. 
+            
+            First, we calculated the **Operations Tuition Increase (OTI)**, which reflects the impact of inflation on costs. The Rate of Inflation (ROI) was set at {roi_percentage:.2f}%, and a productivity adjustment of {rpi_percentage:.2f}% was added. Together, these factors resulted in an OTI of {oti:.2f}%.
+
+            Next, we factored in the costs of **Strategic Items**. These are investments the school plans to make to improve facilities, curriculum, or other areas. The total strategic item cost was spread across all students, resulting in a Strategic Items (SI) percentage increase of {si_percentage:.2f}%.
+
+            By combining the OTI and the SI percentage, the total tuition increase was calculated to be {final_tuition_increase:.2f}%.
+
+            Lastly, we considered financial aid. The total amount of financial aid was calculated to account for {tuition_assistance_ratio:.2f}% of the new total tuition.
+            """
+
+            st.subheader("Summary of Calculations")
+            st.markdown(summary_text)
+
+            # Generate the PDF report
+            pdf_buffer = generate_pdf(
+                report_title, df, total_current_tuition, total_new_tuition,
+                final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+                summary_text
+            )
+
+            # Download button for the PDF report
+            st.download_button(
+                label="Download Report as PDF",
+                data=pdf_buffer,
+                file_name="tuition_report.pdf",
+                mime="application/pdf"
+            )
+    except Exception as e:
+        st.error(f"An error occurred during calculation: {str(e)}")

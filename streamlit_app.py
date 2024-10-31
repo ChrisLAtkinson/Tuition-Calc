@@ -207,10 +207,10 @@ if st.button("Calculate New Tuition"):
             st.subheader("Tuition by Grade Level")
             st.write(df)
 
-            # Create strategic items DataFrame
+            # Display all Strategic Items added by the user
             strategic_items_df = pd.DataFrame({
-                "Strategic Item": strategic_item_names[:len(grades)],  # Ensure lengths match grades
-                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs[:len(grades)]]
+                "Strategic Item": strategic_item_names,  # Display all entered strategic items
+                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]
             })
 
             st.subheader("Strategic Items")

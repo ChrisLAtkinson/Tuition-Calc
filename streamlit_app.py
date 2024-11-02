@@ -55,16 +55,20 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
                                   f"New Tuition: {row['New Tuition per Student']}")
         row_y -= 15
 
-    # Strategic Items Section
+    # Strategic Items Section with descriptions
     if not strategic_items_df.empty:
         row_y -= 20
         pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(50, row_y, "Strategic Items and Costs:")
+        pdf.drawString(50, row_y, "Strategic Items, Costs, and Descriptions:")
         row_y -= 20
         pdf.setFont("Helvetica", 10)
         for i, row in strategic_items_df.iterrows():
             pdf.drawString(50, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
             row_y -= 15
+            description_lines = textwrap.wrap(row['Description'], width=90)
+            for line in description_lines:
+                pdf.drawString(70, row_y, line)
+                row_y -= 15
 
     # Add the calculation summary text
     row_y -= 20
@@ -116,10 +120,11 @@ else:
     avg_tuition = 0.0
     st.error("Please enter valid student numbers and tuition rates to calculate average tuition.")
 
-# Step 4: Add Strategic Items
-st.subheader("Step 4: Add Strategic Items")
+# Step 4: Add Strategic Items and Descriptions
+st.subheader("Step 4: Add Strategic Items and Descriptions")
 strategic_items_costs = []
 strategic_item_names = []
+strategic_item_descriptions = []
 num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
 
 for i in range(int(num_items)):
@@ -128,8 +133,11 @@ for i in range(int(num_items)):
     formatted_item_cost = format_input_as_currency(item_cost_input)
     st.text(f"Formatted Cost: {formatted_item_cost}")
     item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
+    item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
+
     strategic_item_names.append(item_name)
     strategic_items_costs.append(item_cost)
+    strategic_item_descriptions.append(item_description)
 
 # Step 5: Previous Year’s Expenses
 st.subheader("Step 5: Previous Year's Total Expenses")
@@ -207,10 +215,11 @@ if st.button("Calculate New Tuition"):
             st.subheader("Tuition by Grade Level")
             st.write(df)
 
-            # Display all Strategic Items added by the user
+            # Display all Strategic Items added by the user with descriptions
             strategic_items_df = pd.DataFrame({
-                "Strategic Item": strategic_item_names,  # Display all entered strategic items
-                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs]
+                "Strategic Item": strategic_item_names,
+                "Cost ($)": [format_currency(cost) for cost in strategic_items_costs],
+                "Description": strategic_item_descriptions
             })
 
             st.subheader("Strategic Items")

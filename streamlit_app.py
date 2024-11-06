@@ -179,51 +179,65 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-# Step 10: Calculate New Tuition and Display Results
+# Step 10: Initial Calculation and Display of Results with Adjustments
 if st.button("Calculate New Tuition"):
     try:
         if sum(num_students) == 0 or len(current_tuition) == 0:
             st.error("Please provide valid inputs for all grade levels.")
         else:
-            # Calculate total current tuition
-            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-            
-            # Calculate new tuition using adjusted increases by student distribution
-            total_students = sum(num_students)
-            increase_percentages = [(students / total_students) * final_tuition_increase for students in num_students]
-            new_tuition_per_student = [tuition * (1 + increase_percentage / 100) for tuition, increase_percentage in zip(current_tuition, increase_percentages)]
-            total_new_tuition = sum([students * tuition for students, tuition in zip(num_students, new_tuition_per_student)])
-            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+            # Evenly distribute initial increase across all grades
+            initial_increase_percentage = final_tuition_increase / num_grades
+            adjusted_increases = [initial_increase_percentage] * num_grades
+            new_tuition_per_student = [
+                tuition * (1 + increase / 100) for tuition, increase in zip(current_tuition, adjusted_increases)
+            ]
 
-            # Create a DataFrame to display results
+            # Display initial results
+            st.subheader("Results - Initial Evenly Distributed Increase")
             tuition_data = {
                 "Grade": grades,
                 "Number of Students": num_students,
                 "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
                 "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-                "Increase Percentage": increase_percentages
+                "Increase Percentage": adjusted_increases,
             }
             df = pd.DataFrame(tuition_data)
-
-            # Display results
-            st.subheader("Results")
-            st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-            st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-            st.write(f"**Final Tuition Increase Percentage (Distributed):** {final_tuition_increase:.2f}%")
-            st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-            st.subheader("Tuition by Grade Level with Adjusted Increases")
             st.write(df)
 
-            # PDF generation and download button
+            # User Adjustment of Increase Percentages
+            st.subheader("Adjust Increase Percentage by Grade Level")
+            for i, grade in enumerate(grades):
+                adjusted_increases[i] = st.slider(
+                    f"Adjust Increase for {grade}",
+                    min_value=0.0,
+                    max_value=2 * final_tuition_increase,
+                    value=initial_increase_percentage,
+                    step=0.1,
+                    key=f"slider_{i}"
+                )
+
+            # Apply new tuition after adjustments
+            new_tuition_per_student = [
+                tuition * (1 + increase / 100) for tuition, increase in zip(current_tuition, adjusted_increases)
+            ]
+            total_new_tuition = sum([students * tuition for students, tuition in zip(num_students, new_tuition_per_student)])
+            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+
+            # Display adjusted results
+            st.subheader("Adjusted Tuition Results")
+            tuition_data["New Tuition per Student"] = [format_currency(nt) for nt in new_tuition_per_student]
+            tuition_data["Increase Percentage"] = adjusted_increases
+            df = pd.DataFrame(tuition_data)
+            st.write(df)
+
+            # Generate PDF report
             pdf_buffer = generate_pdf(
                 report_title, df, total_current_tuition, total_new_tuition,
                 final_tuition_increase, tuition_assistance_ratio, pd.DataFrame({
                     "Strategic Item": strategic_item_names,
                     "Cost ($)": [format_currency(cost) for cost in strategic_items_costs],
                     "Description": strategic_item_descriptions
-                }), summary_text=f"""
-                The tuition increase was calculated based on demand distribution across grade levels, applying a higher increase where demand is higher.
-                """
+                }), summary_text="The tuition increase was calculated with an evenly distributed increase across grades, with adjustments based on user input."
             )
 
             st.download_button(

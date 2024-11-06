@@ -176,27 +176,32 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
+    # Initialize session state for interactive adjustments
+    if "adjusted_tuition" not in st.session_state:
+        st.session_state.adjusted_tuition = new_tuition_per_student
+
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
     tuition_data = {
         "Grade": grades,
         "Number of Students": num_students,
         "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": new_tuition_per_student
+        "Adjusted New Tuition per Student": st.session_state.adjusted_tuition,
     }
     df = pd.DataFrame(tuition_data)
 
     # Editable tuition column for real-time adjustment
     for i in range(len(grades)):
-        df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+        st.session_state.adjusted_tuition[i] = st.number_input(
             f"Adjusted Tuition for {grades[i]}",
-            value=new_tuition_per_student[i],
+            value=st.session_state.adjusted_tuition[i],
             min_value=0.0,
             step=0.01,
             key=f"adjusted_tuition_{i}"
         )
 
-    # Recalculate totals and differences
+    # Update the DataFrame with session state values
+    df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
 

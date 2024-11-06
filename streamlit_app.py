@@ -75,11 +75,11 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     if not strategic_items_df.empty:
         row_y -= 20
         pdf.setFont("Helvetica-Bold", 12)
-        pdf.drawString(50, row_y, "Strategic Items, Costs, and Descriptions:")
+        pdf.drawString(50, row_y, "Strategic Initiatives and Costs:")
         row_y -= 20
         pdf.setFont("Helvetica", 10)
         for i, row in strategic_items_df.iterrows():
-            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
+            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {format_currency(row['Cost ($)'])}")
             row_y -= 15
             description_lines = textwrap.wrap(row['Description'], width=90)
             for line in description_lines:
@@ -158,7 +158,32 @@ st.subheader("Initial Tuition Increase Results")
 st.write(initial_df)
 st.write(f"**Total New Tuition with Initial Increase:** {format_currency(total_initial_new_tuition)}")
 
-# Step 5: Adjust Tuition for Each Grade Level
+# Step 5: Add Strategic Initiatives
+st.subheader("Step 5: Add Strategic Initiatives")
+strategic_items = []
+strategic_costs = []
+strategic_descriptions = []
+num_strategic_items = st.number_input("Number of Strategic Initiatives", min_value=0, max_value=10, value=0, step=1)
+
+for i in range(num_strategic_items):
+    item = st.text_input(f"Strategic Initiative {i+1} Name", f"Initiative {i+1}")
+    cost_input = st.text_input(f"Cost of {item} ($)", "")
+    formatted_cost = format_input_as_currency(cost_input)
+    st.text(f"Formatted Cost: {formatted_cost}")
+    cost = float(formatted_cost.replace(",", "").replace("$", "")) if formatted_cost else 0.0
+    description = st.text_area(f"Description for {item}", f"Enter a description for {item}")
+
+    strategic_items.append(item)
+    strategic_costs.append(cost)
+    strategic_descriptions.append(description)
+
+strategic_items_df = pd.DataFrame({
+    "Strategic Item": strategic_items,
+    "Cost ($)": strategic_costs,
+    "Description": strategic_descriptions
+})
+
+# Step 6: Adjust Tuition for Each Grade Level
 st.subheader("Adjust Tuition for Each Grade Level")
 adjustment_df = pd.DataFrame({
     "Grade": grades,
@@ -199,7 +224,7 @@ st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Stud
 st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
 st.write(f"**Overall Adjusted Tuition Increase Percentage:** {overall_increase_percentage:.2f}%")
 
-# Step 6: Generate PDF with Results
+# Step 7: Generate PDF with Results
 if st.button("Download PDF Report"):
     summary_text = (
         f"The initial tuition increase was uniformly applied across all grade levels at {final_tuition_increase}%. "
@@ -213,7 +238,7 @@ if st.button("Download PDF Report"):
     pdf_buffer = generate_pdf(
         report_title, adjustment_df, total_current_tuition=total_tuition, total_new_tuition=adjusted_total_tuition,
         avg_increase_percentage=overall_increase_percentage, tuition_assistance_ratio=tuition_assistance_ratio,
-        strategic_items_df=pd.DataFrame(),  # Placeholder for strategic items
+        strategic_items_df=strategic_items_df,
         summary_text=summary_text
     )
 

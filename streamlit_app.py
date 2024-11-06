@@ -15,7 +15,7 @@ def format_currency(value):
     try:
         return locale.currency(value, grouping=True)
     except:
-        return f"<span class="math-inline">\{value\:,\.2f\}"
+        return f"<span class='math-inline'><span class="math-inline">\{\{\{value\:,\.2f\}\}\}</span\>"  \# Corrected line
 \# Function to format input strings as currency
 def format\_input\_as\_currency\(input\_value\)\:
 try\:
@@ -142,4 +142,6 @@ previous\_expenses \= float\(formatted\_previous\_expenses\.replace\(",", ""\)\.
 
 # Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation
 st.subheader("Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation")
-roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
+rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
+oti = roi

@@ -51,7 +51,8 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     for i, row in df.iterrows():
         pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
                                   f"Current Tuition: {row['Current Tuition per Student']}, "
-                                  f"New Tuition: {row['New Tuition per Student']}")
+                                  f"New Tuition: {row['New Tuition per Student']}, "
+                                  f"Increase Percentage: {row['Increase Percentage']:.2f}%")
         row_y -= 15
 
     # Strategic Items Section with descriptions
@@ -119,62 +120,60 @@ else:
     avg_tuition = 0.0
     st.error("Please enter valid student numbers and tuition rates to calculate average tuition.")
 
-# Step 4: Apply Initial Tuition Increase and Display Results
-st.subheader("Step 4: Apply Tuition Increase")
+# Step 4: Apply Initial Tuition Increase Across All Grades
+st.subheader("Step 4: Apply Initial Tuition Increase Across All Grades")
 final_tuition_increase = st.number_input("Enter Overall Tuition Increase Percentage", min_value=0.0, value=9.0, step=0.1)
 st.text(f"Applying {final_tuition_increase}% increase across all grades.")
 
 # Calculate initial new tuition per student with the uniform increase
-new_tuition_per_student = [tuition * (1 + final_tuition_increase / 100) for tuition in current_tuition]
-total_new_tuition = sum([students * tuition for students, tuition in zip(num_students, new_tuition_per_student)])
+initial_new_tuition_per_student = [tuition * (1 + final_tuition_increase / 100) for tuition in current_tuition]
+total_initial_new_tuition = sum([students * tuition for students, tuition in zip(num_students, initial_new_tuition_per_student)])
 
 # Display initial results in a DataFrame
 initial_data = {
     "Grade": grades,
     "Number of Students": num_students,
     "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-    "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+    "New Tuition per Student": [format_currency(nt) for nt in initial_new_tuition_per_student],
     "Increase Percentage": [final_tuition_increase] * num_grades,
 }
 initial_df = pd.DataFrame(initial_data)
 st.subheader("Initial Tuition Increase Results")
 st.write(initial_df)
-st.write(f"**Total New Tuition with Initial Increase:** {format_currency(total_new_tuition)}")
+st.write(f"**Total New Tuition with Initial Increase:** {format_currency(total_initial_new_tuition)}")
 
-# Step 5: Interactive Adjustment Table
-st.subheader("Adjust Tuition Increase for Each Grade Level")
+# Step 5: Adjust Tuition for Each Grade Level
+st.subheader("Adjust Tuition for Each Grade Level")
 adjustment_df = pd.DataFrame({
     "Grade": grades,
     "Number of Students": num_students,
     "Current Tuition per Student": current_tuition,
-    "New Tuition per Student": new_tuition_per_student,
-    "Adjusted Tuition Increase (%)": [final_tuition_increase] * num_grades,
+    "Initial New Tuition per Student": initial_new_tuition_per_student,
+    "Adjusted New Tuition per Student": initial_new_tuition_per_student,  # Start with initial values
 })
 
-# Allow user to adjust each grade level's tuition increase
+# Allow user to input adjusted tuition for each grade level
 for i in range(num_grades):
-    adjustment_df.at[i, "Adjusted Tuition Increase (%)"] = st.number_input(
-        f"Adjusted Increase for {grades[i]} (%)",
+    adjustment_df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+        f"Adjusted Tuition for {grades[i]} ($)",
         min_value=0.0,
-        max_value=200.0,
-        value=final_tuition_increase,
-        step=0.1,
-        key=f"adjustment_{i}"
+        value=initial_new_tuition_per_student[i],
+        step=0.01,
+        key=f"adjusted_tuition_{i}"
     )
 
-# Apply adjustments to calculate new tuition per student based on user's inputs
-adjustment_df["Adjusted New Tuition per Student"] = [
-    row["Current Tuition per Student"] * (1 + row["Adjusted Tuition Increase (%)"] / 100)
-    for _, row in adjustment_df.iterrows()
+# Calculate percentage increase based on user input and total tuition
+adjustment_df["Adjusted Increase (%)"] = [
+    ((adjusted - current) / current * 100) if current > 0 else 0
+    for adjusted, current in zip(adjustment_df["Adjusted New Tuition per Student"], adjustment_df["Current Tuition per Student"])
 ]
 
-# Calculate total adjusted tuition
 adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted New Tuition per Student"]
 adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
 
 # Display adjusted tuition table and the updated total
 st.subheader("Adjusted Tuition Results")
-st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted Tuition Increase (%)", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Adjusted Increase (%)", "Total Tuition for Grade"]])
 st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
 
 # Step 6: Generate PDF with Results
@@ -183,7 +182,7 @@ if st.button("Download PDF Report"):
         report_title, adjustment_df, total_current_tuition=total_tuition, total_new_tuition=adjusted_total_tuition,
         avg_increase_percentage=final_tuition_increase, tuition_assistance_ratio=0,  # Placeholder for tuition assistance ratio
         strategic_items_df=pd.DataFrame(),  # Placeholder for strategic items
-        summary_text="The tuition increase was applied uniformly at first and then adjusted manually per grade level."
+        summary_text="The tuition increase was initially applied uniformly, then adjusted manually per grade level."
     )
 
     st.download_button(

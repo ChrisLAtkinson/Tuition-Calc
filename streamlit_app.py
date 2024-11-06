@@ -44,11 +44,78 @@ class CustomEncoder(json.JSONEncoder):
 # Function to generate a downloadable PDF report
 def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, summary_text):
     # ... (PDF generation remains the same)
+    pass # Placeholder for PDF generation logic
 
-# Streamlit App Start
 st.title("Tuition Calculation Tool")
 
-# ... (Steps 1 through 7 remain the same)
+# Step 1: Enter a Custom Title for the Report
+report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tuition Projection")
+
+# Step 2: Add Custom Grade Levels and Tuition Rates
+st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
+grades = []
+num_students = []
+current_tuition = []
+num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1, step=1)
+
+for i in range(num_grades):
+    grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
+    students = st.number_input(f"Number of Students in {grade}", min_value=0, step=1, value=0)
+    tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
+    formatted_tuition = format_input_as_currency(tuition_input)
+    tuition = float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
+    grades.append(grade)
+    num_students.append(students)
+    current_tuition.append(tuition)
+
+# Step 3: Automatically Calculate Average Tuition
+st.subheader("Step 3: Automatically Calculate Average Tuition")
+if sum(num_students) > 0:
+    total_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+    avg_tuition = total_tuition / sum(num_students)
+    st.write(f"Automatically Calculated Average Tuition per Student: {format_currency(avg_tuition)}")
+else:
+    avg_tuition = 0.0
+    st.error("Please enter valid student numbers and tuition rates to calculate average tuition.")
+
+# Step 4: Add Strategic Items and Descriptions
+st.subheader("Step 4: Add Strategic Items and Descriptions")
+strategic_items_costs = []
+strategic_item_names = []
+strategic_item_descriptions = []
+num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
+
+for i in range(int(num_items)):
+    item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
+    item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
+    formatted_item_cost = format_input_as_currency(item_cost_input)
+    item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
+    item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
+
+    strategic_item_names.append(item_name)
+    strategic_items_costs.append(item_cost)
+    strategic_item_descriptions.append(item_description)
+
+# Step 5: Previous Year’s Total Expenses
+st.subheader("Step 5: Enter Previous Year's Total Expenses")
+previous_expenses_input = st.text_input("Previous Year's Total Expenses ($)", "")
+formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
+previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", "")) if formatted_previous_expenses else 0.0
+
+# Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation
+st.subheader("Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation")
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
+rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
+oti = roi_percentage + rpi_percentage
+total_strategic_items_cost = sum(strategic_items_costs)
+si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
+final_tuition_increase = oti + si_percentage
+
+# Step 7: Financial Aid (Tuition Assistance) Calculation
+st.subheader("Step 7: Financial Aid (Tuition Assistance)")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
 # Step 8: Calculate New Tuition and Display Results
 if st.button("Calculate New Tuition"):

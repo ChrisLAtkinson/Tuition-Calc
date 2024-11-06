@@ -85,7 +85,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     return buffer
 
 # Streamlit App Start
-st.title("Tuition Calculation and Adjustment Tool")
+st.title("Tuition Calculation Tool")
 
 # Step 1: Enter a Custom Title for the Report
 st.subheader("Step 1: Enter a Custom Title for the Report")
@@ -133,6 +133,7 @@ for i in range(int(num_items)):
     st.text(f"Formatted Cost: {formatted_item_cost}")
     item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
     item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
+
     strategic_item_names.append(item_name)
     strategic_items_costs.append(item_cost)
     strategic_item_descriptions.append(item_description)
@@ -160,70 +161,36 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-# Step 8: Calculate New Tuition and Display Results
-if st.button("Calculate New Tuition"):
-    total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-    total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
-    tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+# Step 8: Real-Time Tuition Adjustment and Results
+st.subheader("Adjust Tuition by Grade Level")
+tuition_data = {
+    "Grade": grades,
+    "Number of Students": num_students,
+    "Current Tuition per Student": current_tuition,
+    "Adjusted New Tuition per Student": [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+}
+df = pd.DataFrame(tuition_data)
 
-   # Display Summary Prior to Interactive Adjustment
-    st.subheader("Summary Prior to Interactive Adjustment")
-    st.write(f"**Report Title:** {report_title}")
-    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-# After displaying the results
-if st.button("Adjust Tuition by Grade Level"):
-    st.subheader("Distribute Tuition Adjustments by Grade Level")
-    st.write(
-        "Use the interactive table below to adjust tuition amounts for each grade level "
-        "and try to match the total new adjusted tuition."
+# Allow user to interactively adjust tuition per grade
+for i in range(len(grades)):
+    adjusted_tuition = st.number_input(
+        f"Adjusted Tuition for {grades[i]}",
+        value=df.at[i, "Adjusted New Tuition per Student"],
+        min_value=0.0,
+        step=0.01,
+        key=f"adjusted_tuition_{i}"
     )
+    df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
 
-    # Initialize session state for adjusted tuition if not already set
-    if "interactive_adjustments" not in st.session_state:
-        st.session_state.interactive_adjustments = {
-            "Grade": grades,
-            "Number of Students": num_students,
-            "Current Tuition": current_tuition,
-            "Target Tuition per Student": new_tuition_per_student,
-            "Adjusted Tuition per Student": new_tuition_per_student,
-        }
+# Calculate adjusted totals
+df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 
-    # Create a DataFrame for interactive adjustment
-    adjustment_df = pd.DataFrame(st.session_state.interactive_adjustments)
+# Display updated results
+st.write(df[["Grade", "Number of Students", "Current Tuition per Student",
+             "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+st.write(f"**Difference from Target Total Tuition:** {format_currency((sum(df['Total Tuition for Grade']) - adjusted_total_tuition))}")
 
-    # Add a column to calculate total tuition for each grade
-    adjustment_df["Total Tuition for Grade"] = (
-        adjustment_df["Number of Students"] * adjustment_df["Adjusted Tuition per Student"]
-    )
-
-    # Use Streamlit's `st.data_editor` for live table updates
-    edited_df = st.data_editor(
-        adjustment_df,
-        key="live_adjustment_table",
-        num_rows="dynamic",
-        use_container_width=True
-    )
-
-    # Recalculate totals based on edited values
-    edited_df["Total Tuition for Grade"] = (
-        edited_df["Number of Students"] * edited_df["Adjusted Tuition per Student"]
-    )
-    adjusted_total_tuition = edited_df["Total Tuition for Grade"].sum()
-    difference_from_target = total_new_tuition - adjusted_total_tuition
-
-    # Display updated totals and feedback
-    st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Adjusted Tuition:** {format_currency(difference_from_target)}")
-
-    # Feedback for the user
-    if abs(difference_from_target) < 1e-2:  # Tolerance to consider as "matched"
-        st.success("Great job! The adjusted tuition matches the target adjusted tuition.")
-    elif difference_from_target > 0:
-        st.warning(f"You need to increase the tuition by {format_currency(difference_from_target)} to match the target.")
-    else:
-        st.warning(f"You need to decrease the tuition by {format_currency(abs(difference_from_target))} to match the target.")
+pdf=

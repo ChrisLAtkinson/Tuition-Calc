@@ -51,8 +51,8 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     pdf.setFont("Helvetica", 10)
     for i, row in df.iterrows():
         pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
-                                  f"Current Tuition: {row['Current Tuition per Student']}, "
-                                  f"New Tuition: {row['New Tuition per Student']}")
+                                  f"Current Tuition: {format_currency(row['Current Tuition per Student'])}, "
+                                  f"Adjusted New Tuition: {format_currency(row['Adjusted New Tuition per Student'])}")
         row_y -= 15
 
     # Strategic Items Section with descriptions
@@ -63,7 +63,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
         row_y -= 20
         pdf.setFont("Helvetica", 10)
         for i, row in strategic_items_df.iterrows():
-            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {row['Cost ($)']}")
+            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {format_currency(row['Cost ($)'])}")
             row_y -= 15
             description_lines = textwrap.wrap(row['Description'], width=90)
             for line in description_lines:
@@ -159,24 +159,15 @@ if st.button("Calculate New Tuition"):
     tuition_data = {
         "Grade": grades,
         "Number of Students": num_students,
-        "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-        "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-        "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+        "Current Tuition per Student": current_tuition,
+        "Adjusted New Tuition per Student": new_tuition_per_student
     }
     df = pd.DataFrame(tuition_data)
-    st.write(df)
 
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
-    adjustment_df = pd.DataFrame({
-        "Grade": grades,
-        "Number of Students": num_students,
-        "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": new_tuition_per_student
-    })
-
     for i in range(len(grades)):
-        adjustment_df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+        df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
             f"Adjusted Tuition for {grades[i]}",
             value=new_tuition_per_student[i],
             min_value=0.0,
@@ -184,18 +175,24 @@ if st.button("Calculate New Tuition"):
         )
 
     # Calculate adjusted totals and differences
-    adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted New Tuition per Student"]
-    adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
-    st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 
     # Display Adjusted Total
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
 
     # Generate the PDF report
+    strategic_items_df = pd.DataFrame({
+        "Strategic Item": strategic_item_names,
+        "Cost ($)": strategic_items_costs,
+        "Description": strategic_item_descriptions
+    })
+
     pdf_buffer = generate_pdf(
-        report_title, adjustment_df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, si_percentage, pd.DataFrame({"Strategic Item": strategic_item_names, "Cost ($)": strategic_items_costs, "Description": strategic_item_descriptions}),
+        report_title, df, total_current_tuition, adjusted_total_tuition,
+        final_tuition_increase, si_percentage, strategic_items_df,
         "Summary of tuition adjustment calculations."
     )
 

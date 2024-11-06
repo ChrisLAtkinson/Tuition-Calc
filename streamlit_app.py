@@ -182,78 +182,75 @@ financial_aid = float(financial_aid_input.replace(",", "").replace("$", "")) if 
 # Step 8: Calculate New Tuition and Display Initial Results
 if st.button("Calculate New Tuition"):
     try:
-        if sum(num_students) == 0 or len(current_tuition) == 0:
-            st.error("Please provide valid inputs for all grade levels.")
-        else:
-            # Calculate total current tuition
-            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-            
-            # Calculate the new total tuition by applying the final increase
-            total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-            
-            # Calculate the average increase per student
-            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
-            tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+        # Calculate total current tuition
+        total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+        
+        # Calculate the new total tuition by applying the final increase
+        total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
+        
+        # Calculate the average increase per student
+        new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+        tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
-            # Display Results
-            st.subheader("Initial Tuition Increase Results")
-            st.write(f"**Report Title:** {report_title}")
-            st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-            st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-            st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-            st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+        # Display Results
+        st.subheader("Initial Tuition Increase Results")
+        st.write(f"**Report Title:** {report_title}")
+        st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+        st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+        st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+        st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-            # Create DataFrame for tuition by grade level
-            tuition_data = {
-                "Grade": grades,
-                "Number of Students": num_students,
-                "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-                "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
-            }
-            df = pd.DataFrame(tuition_data)
+        # Create DataFrame for tuition by grade level
+        tuition_data = {
+            "Grade": grades,
+            "Number of Students": num_students,
+            "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
+            "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+            "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+        }
+        df = pd.DataFrame(tuition_data)
 
-            st.write(df)
+        st.write(df)
 
-            # Allow users to edit adjusted tuition per grade level
-            st.subheader("Adjust Tuition by Grade Level")
-            adjustment_df = df.copy()
-            adjustment_df["Adjusted New Tuition per Student"] = [
-                st.number_input(f"Adjusted Tuition for {grade}", value=nt, min_value=0.0, step=0.01)
-                for grade, nt in zip(grades, new_tuition_per_student)
-            ]
-            adjustment_df["Adjusted Increase (%)"] = [
-                ((new - tuition) / tuition * 100) if tuition > 0 else 0
-                for new, tuition in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
-            ]
+        # Allow users to edit adjusted tuition per grade level
+        st.subheader("Adjust Tuition by Grade Level")
+        adjustment_df = df.copy()
+        adjustment_df["Adjusted New Tuition per Student"] = [
+            st.number_input(f"Adjusted Tuition for {grade}", value=float(nt.replace("$", "").replace(",", "")), min_value=0.0, step=0.01)
+            for grade, nt in zip(grades, new_tuition_per_student)
+        ]
+        adjustment_df["Adjusted Increase (%)"] = [
+            ((new - tuition) / tuition * 100) if tuition > 0 else 0
+            for new, tuition in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
+        ]
 
-            adjusted_total_tuition = sum([students * tuition for students, tuition in zip(num_students, adjustment_df["Adjusted New Tuition per Student"])])
-            overall_adjusted_increase_percentage = ((adjusted_total_tuition - total_tuition) / total_tuition) * 100 if total_tuition > 0 else 0
-            st.write(adjustment_df)
+        adjusted_total_tuition = sum([students * tuition for students, tuition in zip(num_students, adjustment_df["Adjusted New Tuition per Student"])])
+        overall_adjusted_increase_percentage = ((adjusted_total_tuition - total_tuition) / total_tuition) * 100 if total_tuition > 0 else 0
+        st.write(adjustment_df)
 
-            # Summary and PDF Generation
-            summary_text = f"""
-            ### Summary of Calculations:
-            - **Operations Tuition Increase (OTI)** based on ROI ({roi_percentage:.2f}%) and RPI ({rpi_percentage:.2f}%).
-            - **Strategic Items (SI)** accounted for a {si_percentage:.2f}% increase.
-            - **Total Tuition Increase**: {final_tuition_increase:.2f}%.
-            - **Adjusted Total Tuition**: {format_currency(adjusted_total_tuition)} with an adjusted increase of {overall_adjusted_increase_percentage:.2f}%.
-            """
+        # Summary and PDF Generation
+        summary_text = f"""
+        ### Summary of Calculations:
+        - **Operations Tuition Increase (OTI)** based on ROI ({roi_percentage:.2f}%) and RPI ({rpi_percentage:.2f}%).
+        - **Strategic Items (SI)** accounted for a {si_percentage:.2f}% increase.
+        - **Total Tuition Increase**: {final_tuition_increase:.2f}%.
+        - **Adjusted Total Tuition**: {format_currency(adjusted_total_tuition)} with an adjusted increase of {overall_adjusted_increase_percentage:.2f}%.
+        """
 
-            st.subheader("Summary of Calculations")
-            st.markdown(summary_text)
+        st.subheader("Summary of Calculations")
+        st.markdown(summary_text)
 
-            pdf_buffer = generate_pdf(
-                report_title, adjustment_df, total_current_tuition, adjusted_total_tuition,
-                overall_adjusted_increase_percentage, tuition_assistance_ratio, strategic_items_df,
-                summary_text
-            )
+        pdf_buffer = generate_pdf(
+            report_title, adjustment_df, total_current_tuition, adjusted_total_tuition,
+            overall_adjusted_increase_percentage, tuition_assistance_ratio, strategic_items_df,
+            summary_text
+        )
 
-            st.download_button(
-                label="Download Report as PDF",
-                data=pdf_buffer,
-                file_name="tuition_report.pdf",
-                mime="application/pdf"
-            )
+        st.download_button(
+            label="Download Report as PDF",
+            data=pdf_buffer,
+            file_name="tuition_report.pdf",
+            mime="application/pdf"
+        )
     except Exception as e:
         st.error(f"An error occurred during calculation: {str(e)}")

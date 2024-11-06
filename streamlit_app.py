@@ -1,10 +1,3 @@
-Your revised interactive adjustment table code is more efficient and directly updates the DataFrame. This eliminates the need for session state.
-Key Improvements:
-Direct DataFrame Updates: Adjusted tuition inputs are collected directly into the DataFrame.
-Simplified Logic: Removed unnecessary complexity.
-Real-time Updates: Adjustments reflect immediately.
-Full updated code:
-Python
 import streamlit as st
 import pandas as pd
 import locale

@@ -176,51 +176,36 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-    # Interactive Adjustment Table
-    st.subheader("Adjust Tuition by Grade Level")
-    tuition_data = {
-        "Grade": grades,
-        "Number of Students": num_students,
-        "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": new_tuition_per_student
-    }
-    df = pd.DataFrame(tuition_data)
+  # Interactive Adjustment Table
+st.subheader("Adjust Tuition by Grade Level")
+tuition_data = {
+    "Grade": grades,
+    "Number of Students": num_students,
+    "Current Tuition per Student": current_tuition,
+    "Adjusted New Tuition per Student": new_tuition_per_student
+}
+df = pd.DataFrame(tuition_data)
 
-    # Collect adjusted tuition inputs directly into the DataFrame
-    for i in range(len(grades)):
-        adjusted_tuition = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
-            value=new_tuition_per_student[i],
-            min_value=0.0,
-            step=0.01
-        )
-        df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
-
-    # Calculate adjusted totals and differences
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-
-    # Display Adjusted Total
-    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
-
-    # Generate the PDF report
-    strategic_items_df = pd.DataFrame({
-        "Strategic Item": strategic_item_names,
-        "Cost ($)": strategic_items_costs,
-        "Description": strategic_item_descriptions
-    })
-
-    pdf_buffer = generate_pdf(
-        report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-        "Summary of tuition adjustment calculations."
+# Collect adjusted tuition inputs directly into the DataFrame
+adjusted_tuition_values = []
+for i in range(len(grades)):
+    adjusted_tuition = st.number_input(
+        f"Adjusted Tuition for {grades[i]}",
+        value=df.at[i, "Adjusted New Tuition per Student"],
+        min_value=0.0,
+        step=0.01,
+        key=f"adjusted_tuition_{i}"  # Use unique keys to retain values
     )
+    adjusted_tuition_values.append(adjusted_tuition)
 
-    st.download_button(
-        label="Download Report as PDF",
-        data=pdf_buffer,
-        file_name="tuition_report.pdf",
-        mime="application/pdf"
-    )
+# Update DataFrame with adjusted tuition values
+df["Adjusted New Tuition per Student"] = adjusted_tuition_values
+df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+
+# Display the updated DataFrame
+st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+
+# Calculate adjusted totals and differences
+adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")

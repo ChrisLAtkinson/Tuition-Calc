@@ -182,17 +182,21 @@ if st.button("Calculate New Tuition"):
 
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
+
+    # Validate input lengths
+    min_length = min(len(grades), len(num_students), len(current_tuition), len(st.session_state.adjusted_tuition))
     tuition_data = {
-        "Grade": grades,
-        "Number of Students": num_students,
-        "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": st.session_state.adjusted_tuition
+        "Grade": grades[:min_length],
+        "Number of Students": num_students[:min_length],
+        "Current Tuition per Student": current_tuition[:min_length],
+        "Adjusted New Tuition per Student": st.session_state.adjusted_tuition[:min_length]
     }
+
     df = pd.DataFrame(tuition_data)
 
     # Create a form for adjustments
     with st.form("adjust_tuition"):
-        for i in range(len(grades)):
+        for i in range(min_length):
             st.session_state.adjusted_tuition[i] = st.number_input(
                 f"Adjusted Tuition for {grades[i]}",
                 value=st.session_state.adjusted_tuition[i],
@@ -204,7 +208,7 @@ if st.button("Calculate New Tuition"):
 
     # Update DataFrame with session state values after form submission
     if submitted:
-        df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
+        df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition[:min_length]
 
         # Calculate adjusted totals and differences
         df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]

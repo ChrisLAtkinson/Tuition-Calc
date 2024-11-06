@@ -167,8 +167,10 @@ if st.button("Calculate New Tuition"):
     new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
     tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
-    # Display Summary Prior to Interactive Adjustment
+   # Display Summary Prior to Interactive Adjustment
     st.subheader("Summary Prior to Interactive Adjustment")
     st.write(f"**Report Title:** {report_title}")
     st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-    st.write(f"**Total New Tuition
+    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")

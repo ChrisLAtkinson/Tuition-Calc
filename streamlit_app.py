@@ -7,8 +7,11 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import textwrap
 
+# Set page layout to wide for better visibility
+st.set_page_config(layout="wide")
+
 # Configure locale for currency formatting
-locale.setlocale(locale.LC_ALL, '')
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 # Helper function to format numbers as currency
 def format_currency(value):
@@ -54,6 +57,10 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
                                   f"Current Tuition: {format_currency(row['Current Tuition per Student'])}, "
                                   f"Adjusted New Tuition: {format_currency(row['Adjusted New Tuition per Student'])}")
         row_y -= 15
+        if row_y < 50:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 10)
+            row_y = height - 50
 
     # Strategic Items Section with descriptions
     if not strategic_items_df.empty:
@@ -69,6 +76,10 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
             for line in description_lines:
                 pdf.drawString(70, row_y, line)
                 row_y -= 15
+                if row_y < 50:
+                    pdf.showPage()
+                    pdf.setFont("Helvetica", 10)
+                    row_y = height - 50
 
     # Add the calculation summary text
     row_y -= 20
@@ -79,6 +90,10 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     for line in textwrap.wrap(summary_text, width=90):
         pdf.drawString(50, row_y, line)
         row_y -= 15
+        if row_y < 50:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 10)
+            row_y = height - 50
 
     # Finalize PDF
     pdf.save()
@@ -121,23 +136,23 @@ else:
     st.error("Please enter valid student numbers and tuition rates to calculate average tuition.")
 
 # Step 4: Add Strategic Items and Descriptions
-st.subheader("Step 4: Add Strategic Items and Descriptions")
-strategic_items_costs = []
-strategic_item_names = []
-strategic_item_descriptions = []
-num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
+with st.expander("Step 4: Add Strategic Items and Descriptions"):
+    strategic_items_costs = []
+    strategic_item_names = []
+    strategic_item_descriptions = []
+    num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
 
-for i in range(int(num_items)):
-    item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
-    item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
-    formatted_item_cost = format_input_as_currency(item_cost_input)
-    st.text(f"Formatted Cost: {formatted_item_cost}")
-    item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
-    item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
+    for i in range(int(num_items)):
+        item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
+        item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
+        formatted_item_cost = format_input_as_currency(item_cost_input)
+        st.text(f"Formatted Cost: {formatted_item_cost}")
+        item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
+        item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
 
-    strategic_item_names.append(item_name)
-    strategic_items_costs.append(item_cost)
-    strategic_item_descriptions.append(item_description)
+        strategic_item_names.append(item_name)
+        strategic_items_costs.append(item_cost)
+        strategic_item_descriptions.append(item_description)
 
 # Step 5: Previous Year’s Total Expenses
 st.subheader("Step 5: Enter Previous Year's Total Expenses")
@@ -188,21 +203,25 @@ if st.button("Calculate New Tuition"):
     df = pd.DataFrame(tuition_data)
 
     # Collect adjusted tuition inputs directly into the DataFrame
-    for i in range(len(grades)):
+    adjusted_tuitions = []
+    for i, grade in enumerate(grades):
         adjusted_tuition = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
+            f"Adjusted Tuition for {grade}",
             value=new_tuition_per_student[i],
             min_value=0.0,
             step=0.01
         )
-        df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
+        adjusted_tuitions.append(adjusted_tuition)
+
+    # Update DataFrame with new tuition values
+    df["Adjusted New Tuition per Student"] = adjusted_tuitions
+    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+
+    # Display the updated table with scrolling enabled
+    st.dataframe(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]], use_container_width=True)
 
     # Calculate adjusted totals and differences
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-
-    # Display Adjusted Total
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
 

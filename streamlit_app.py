@@ -32,17 +32,6 @@ def format_currency(value):
     except:
         return f"${float(value):,.2f}"
 
-# Function to format input strings as currency
-def format_input_as_currency(input_value):
-    try:
-        if not input_value:
-            return ""
-        input_value = input_value.replace(",", "").replace("$", "")
-        value = float(input_value)
-        return f"${value:,.2f}"
-    except ValueError:
-        return ""
-
 # Function to generate a downloadable PDF report
 def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, summary_text):
     buffer = BytesIO()
@@ -204,19 +193,19 @@ if st.button("Calculate New Tuition"):
         tuition_data = {
             "Grade": grades,
             "Number of Students": num_students,
-            "Current Tuition per Student": current_tuition,  # Use floats here for calculations
-            "Adjusted New Tuition per Student": new_tuition_per_student,  # Store as floats
-            "Increase per Student": [nt - tuition for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+            "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
+            "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+            "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
         }
         df = pd.DataFrame(tuition_data)
 
-        st.write(df.applymap(format_currency, subset=["Current Tuition per Student", "Adjusted New Tuition per Student", "Increase per Student"]))
+        st.write(df)
 
         # Allow users to edit adjusted tuition per grade level
         st.subheader("Adjust Tuition by Grade Level")
         adjustment_df = df.copy()
         adjustment_df["Adjusted New Tuition per Student"] = [
-            st.number_input(f"Adjusted Tuition for {grade}", value=nt, min_value=0.0, step=0.01)
+            st.number_input(f"Adjusted Tuition for {grade}", value=float(nt.replace("$", "").replace(",", "")), min_value=0.0, step=0.01)
             for grade, nt in zip(grades, new_tuition_per_student)
         ]
         adjustment_df["Adjusted Increase (%)"] = [

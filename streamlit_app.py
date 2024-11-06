@@ -119,9 +119,7 @@ for i in range(num_grades):
     grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
     students = st.number_input(f"Number of Students in {grade}", min_value=0, step=1, value=0)
     tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
-    formatted_tuition = format_input_as_currency(tuition_input)
-    st.text(f"Formatted Tuition: {formatted_tuition}")
-    tuition = float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
+    tuition = float(tuition_input.replace(",", "").replace("$", "")) if tuition_input else 0.0
     grades.append(grade)
     num_students.append(students)
     current_tuition.append(tuition)
@@ -146,9 +144,7 @@ num_strategic_items = st.number_input("Number of Strategic Initiatives", min_val
 for i in range(num_strategic_items):
     item = st.text_input(f"Strategic Initiative {i+1} Name", f"Initiative {i+1}")
     cost_input = st.text_input(f"Cost of {item} ($)", "")
-    formatted_cost = format_input_as_currency(cost_input)
-    st.text(f"Formatted Cost: {formatted_cost}")
-    cost = float(formatted_cost.replace(",", "").replace("$", "")) if formatted_cost else 0.0
+    cost = float(cost_input.replace(",", "").replace("$", "")) if cost_input else 0.0
     description = st.text_area(f"Description for {item}", f"Enter a description for {item}")
 
     strategic_items.append(item)
@@ -181,9 +177,7 @@ st.text(f"Final Tuition Increase (OTI + SI): {final_tuition_increase:.2f}%")
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
 financial_aid_input = st.text_input("Total Financial Aid ($)", "")
-formatted_financial_aid = format_input_as_currency(financial_aid_input)
-st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
-financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
+financial_aid = float(financial_aid_input.replace(",", "").replace("$", "")) if financial_aid_input else 0.0
 
 # Step 8: Calculate New Tuition and Display Initial Results
 if st.button("Calculate New Tuition"):
@@ -192,13 +186,13 @@ if st.button("Calculate New Tuition"):
             st.error("Please provide valid inputs for all grade levels.")
         else:
             # Calculate total current tuition
-            total_current_tuition = sum([students * float(tuition) for students, tuition in zip(num_students, current_tuition)])
+            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
             
             # Calculate the new total tuition by applying the final increase
             total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
             
             # Calculate the average increase per student
-            new_tuition_per_student = [(float(tuition) * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
             tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
@@ -215,7 +209,7 @@ if st.button("Calculate New Tuition"):
                 "Number of Students": num_students,
                 "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
                 "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-                "Increase per Student": [format_currency(nt - float(tuition)) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
             }
             df = pd.DataFrame(tuition_data)
 
@@ -229,8 +223,8 @@ if st.button("Calculate New Tuition"):
                 for grade, nt in zip(grades, new_tuition_per_student)
             ]
             adjustment_df["Adjusted Increase (%)"] = [
-                ((new - float(current)) / float(current) * 100) if current > 0 else 0
-                for new, current in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
+                ((new - tuition) / tuition * 100) if tuition > 0 else 0
+                for new, tuition in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
             ]
 
             adjusted_total_tuition = sum([students * tuition for students, tuition in zip(num_students, adjustment_df["Adjusted New Tuition per Student"])])

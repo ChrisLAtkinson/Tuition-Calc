@@ -1,4 +1,3 @@
-Here's the full code:
 Python
 import streamlit as st
 import pandas as pd

@@ -16,66 +16,96 @@ def format_currency(value):
     except:
         return f"${value:,.2f}"
 
-# PDF generation function
-def generate_pdf(report_title, df, adjusted_total_tuition, target_total_tuition):
+# Function to format input strings as currency
+def format_input_as_currency(input_value):
+    try:
+        if not input_value:
+            return ""
+        input_value = input_value.replace(",", "").replace("$", "")
+        value = float(input_value)
+        return f"${value:,.2f}"
+    except ValueError:
+        return ""
+
+# Function to generate a downloadable PDF report
+def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, summary_text):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    # Report Title
+    # Title of the report
     pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(50, height - 50, report_title)
+    pdf.drawString(50, height - 50, f"Report Title: {report_title}")
 
-    # Adjusted Tuition Table
+    # Summary details
     pdf.setFont("Helvetica", 12)
-    row_y = height - 100
-    pdf.drawString(50, row_y, "Adjusted Tuition by Grade Level:")
-    row_y -= 20
-    pdf.setFont("Helvetica", 10)
+    pdf.drawString(50, height - 80, f"Total Current Tuition: {format_currency(total_current_tuition)}")
+    pdf.drawString(50, height - 100, f"Total New Tuition: {format_currency(total_new_tuition)}")
+    pdf.drawString(50, height - 120, f"Average Tuition Increase Percentage: {avg_increase_percentage:.2f}%")
+    pdf.drawString(50, height - 140, f"Tuition Assistance Ratio: {tuition_assistance_ratio:.2f}%")
 
-    for _, row in df.iterrows():
-        pdf.drawString(
-            50,
-            row_y,
-            f"{row['Grade']}: {row['Number of Students']} students, "
-            f"Current Tuition: {format_currency(row['Current Tuition per Student'])}, "
-            f"Adjusted Tuition: {format_currency(row['Adjusted New Tuition per Student'])}"
-        )
+    # Add the table for tuition by grade level
+    pdf.drawString(50, height - 170, "Tuition by Grade Level:")
+    row_y = height - 190
+    pdf.setFont("Helvetica", 10)
+    for i, row in df.iterrows():
+        pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
+                                  f"Current Tuition: {format_currency(row['Current Tuition per Student'])}, "
+                                  f"Adjusted New Tuition: {format_currency(row['Adjusted New Tuition per Student'])}")
         row_y -= 15
 
-    # Summary
+    # Strategic Items Section with descriptions
+    if not strategic_items_df.empty:
+        row_y -= 20
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(50, row_y, "Strategic Items, Costs, and Descriptions:")
+        row_y -= 20
+        pdf.setFont("Helvetica", 10)
+        for i, row in strategic_items_df.iterrows():
+            pdf.drawString(50, row_y, f"{row['Strategic Item']}: {format_currency(row['Cost ($)'])}")
+            row_y -= 15
+            description_lines = textwrap.wrap(row['Description'], width=90)
+            for line in description_lines:
+                pdf.drawString(70, row_y, line)
+                row_y -= 15
+
+    # Add the calculation summary text
     row_y -= 20
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, row_y, "Summary:")
+    pdf.drawString(50, row_y, "Summary of Calculations:")
     row_y -= 20
     pdf.setFont("Helvetica", 10)
-    pdf.drawString(50, row_y, f"Adjusted Total Tuition: {format_currency(adjusted_total_tuition)}")
-    row_y -= 15
-    pdf.drawString(50, row_y, f"Difference from Target Total Tuition: {format_currency(target_total_tuition - adjusted_total_tuition)}")
+    for line in textwrap.wrap(summary_text, width=90):
+        pdf.drawString(50, row_y, line)
+        row_y -= 15
 
+    # Finalize PDF
     pdf.save()
     buffer.seek(0)
     return buffer
 
-# App title
-st.title("Tuition Adjustment Tool")
+# Streamlit App Start
+st.title("Tuition Calculation Tool")
 
-# Input: Report title
-report_title = st.text_input("Report Title", "2025-26 Tuition Projection")
+# Step 1: Enter a Custom Title for the Report
+st.subheader("Step 1: Enter a Custom Title for the Report")
+report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tuition Projection")
 
-# Input: Grade data
-st.subheader("Grade Levels and Tuition Rates")
+# Step 2: Add Custom Grade Levels and Tuition Rates
+st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
+grades = []
+num_students = []
+current_tuition = []
 if "tuition_data" not in st.session_state:
     st.session_state.tuition_data = pd.DataFrame(columns=[
         "Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student"
     ])
 
-num_grades = st.number_input("Number of Grades", min_value=1, max_value=12, value=1, step=1)
+num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1, step=1)
 
-# Collect grade-specific data
 new_rows = []
 for i in range(num_grades):
-    grade = st.text_input(f"Grade {i + 1}", value=f"Grade {i + 1}", key=f"grade_{i}")
+    grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}", key=f"grade_{i}")
     students = st.number_input(f"Number of Students in {grade}", min_value=0, value=0, step=1, key=f"students_{i}")
     tuition = st.number_input(
         f"Current Tuition per Student in {grade}",
@@ -98,28 +128,34 @@ for i in range(num_grades):
         "Adjusted New Tuition per Student": adjusted_tuition,
     })
 
-# Update session state
-st.session_state.tuition_data = pd.concat(
-    [st.session_state.tuition_data, pd.DataFrame(new_rows)], ignore_index=True
-)
+st.session_state.tuition_data = pd.concat([st.session_state.tuition_data, pd.DataFrame(new_rows)], ignore_index=True)
 
-# Show the DataFrame
+# Step 3: Display Tuition Data
 df = st.session_state.tuition_data.copy()
 df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
 
-st.subheader("Adjusted Tuition Table")
+st.subheader("Tuition Adjustment Table")
 st.write(df)
 
-# Calculate totals
-adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-target_total_tuition = sum(df["Number of Students"] * df["Current Tuition per Student"])
+# Step 4: Summary and Calculations
+total_current_tuition = df["Number of Students"] * df["Current Tuition per Student"]
+total_adjusted_tuition = df["Total Tuition for Grade"].sum()
 
-st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-st.write(f"**Difference from Target Total Tuition:** {format_currency(target_total_tuition - adjusted_total_tuition)}")
+st.write(f"**Adjusted Total Tuition:** {format_currency(total_adjusted_tuition)}")
+st.write(f"**Difference from Current Tuition Total:** {format_currency(total_current_tuition.sum() - total_adjusted_tuition)}")
 
-# Generate PDF
+# Step 5: Generate PDF Report
 if st.button("Generate PDF Report"):
-    pdf_buffer = generate_pdf(report_title, df, adjusted_total_tuition, target_total_tuition)
+    pdf_buffer = generate_pdf(
+        report_title,
+        df,
+        total_current_tuition.sum(),
+        total_adjusted_tuition,
+        0,  # Replace with actual percentage if applicable
+        0,  # Replace with tuition assistance ratio if applicable
+        pd.DataFrame(),  # Replace with strategic items DataFrame if applicable
+        "Summary of tuition adjustment calculations."
+    )
     st.download_button(
         label="Download PDF Report",
         data=pdf_buffer,

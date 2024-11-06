@@ -1,3 +1,5 @@
+Here's the full code:
+Python
 import streamlit as st
 import pandas as pd
 import locale
@@ -190,43 +192,47 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
-    # Collect adjusted tuition inputs directly into session state
-    for i in range(len(grades)):
-        st.session_state.adjusted_tuition[i] = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
-            value=st.session_state.adjusted_tuition[i],
-            min_value=0.0,
-            step=0.01
+    # Create a form for adjustments
+    with st.form("adjust_tuition"):
+        for i in range(len(grades)):
+            st.session_state.adjusted_tuition[i] = st.number_input(
+                f"Adjusted Tuition for {grades[i]}",
+                value=st.session_state.adjusted_tuition[i],
+                min_value=0.0,
+                step=0.01,
+                key=f"tuition_{i}"
+            )
+        submitted = st.form_submit_button("Apply Adjustments")
+
+    # Update DataFrame with session state values after form submission
+    if submitted:
+        df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
+
+        # Calculate adjusted totals and differences
+        df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+        adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+        st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+
+        # Display Adjusted Total
+        st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+        st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+
+        # Generate the PDF report
+        strategic_items_df = pd.DataFrame({
+            "Strategic Item": strategic_item_names,
+            "Cost ($)": strategic_items_costs,
+            "Description": strategic_item_descriptions
+        })
+
+        pdf_buffer = generate_pdf(
+            report_title, df, total_current_tuition, adjusted_total_tuition,
+            final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+            "Summary of tuition adjustment calculations."
         )
 
-    # Update DataFrame with session state values
-    df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
-
-    # Calculate adjusted totals and differences
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-
-    # Display Adjusted Total
-    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
-
-    # Generate the PDF report
-    strategic_items_df = pd.DataFrame({
-        "Strategic Item": strategic_item_names,
-        "Cost ($)": strategic_items_costs,
-        "Description": strategic_item_descriptions
-    })
-
-    pdf_buffer = generate_pdf(
-        report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-        "Summary of tuition adjustment calculations."
-    )
-
-    st.download_button(
-        label="Download Report as PDF",
-        data=pdf_buffer,
-        file_name="tuition_report.pdf",
-        mime="application/pdf"
-    )
+        st.download_button(
+            label="Download Report as PDF",
+            data=pdf_buffer,
+            file_name="tuition_report.pdf",
+            mime="application/pdf"
+        )

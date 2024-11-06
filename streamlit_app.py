@@ -9,6 +9,22 @@ import textwrap
 # Configure locale for currency formatting
 locale.setlocale(locale.LC_ALL, '')
 
+# Set Streamlit to use wide layout
+st.set_page_config(layout="wide")
+
+# CSS to ensure full-width display of DataFrames
+st.markdown(
+    """
+    <style>
+    .css-1lcbmhc {
+        overflow: visible !important;
+        width: 100% !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Helper function to format numbers as currency
 def format_currency(value):
     try:
@@ -129,7 +145,7 @@ st.text(f"Applying {final_tuition_increase}% increase across all grades.")
 initial_new_tuition_per_student = [tuition * (1 + final_tuition_increase / 100) for tuition in current_tuition]
 total_initial_new_tuition = sum([students * tuition for students, tuition in zip(num_students, initial_new_tuition_per_student)])
 
-# Display initial results in a DataFrame
+# Display initial results in a non-scrollable, full-width DataFrame
 initial_data = {
     "Grade": grades,
     "Number of Students": num_students,
@@ -171,7 +187,7 @@ adjustment_df["Adjusted Increase (%)"] = [
 adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted New Tuition per Student"]
 adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
 
-# Display adjusted tuition table and the updated total
+# Display adjusted tuition table and the updated total in a non-scrollable, full-width DataFrame
 st.subheader("Adjusted Tuition Results")
 st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Adjusted Increase (%)", "Total Tuition for Grade"]])
 st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")

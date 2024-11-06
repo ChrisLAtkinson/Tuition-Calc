@@ -191,6 +191,25 @@ tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adj
 st.write(df[["Grade", "Number of Students", "Current Tuition per Student",
              "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-st.write(f"**Difference from Target Total Tuition:** {format_currency((sum(df['Total Tuition for Grade']) - adjusted_total_tuition))}")
+st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+st.write(f"**Updated Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-pdf=
+# Generate and download updated PDF report
+strategic_items_df = pd.DataFrame({
+    "Strategic Item": strategic_item_names,
+    "Cost ($)": strategic_items_costs,
+    "Description": strategic_item_descriptions
+})
+
+pdf_buffer = generate_pdf(
+    report_title, df, total_current_tuition, adjusted_total_tuition,
+    final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+    "Updated summary of tuition adjustment calculations based on user inputs."
+)
+
+st.download_button(
+    label="Download Updated Report as PDF",
+    data=pdf_buffer,
+    file_name="adjusted_tuition_report.pdf",
+    mime="application/pdf"
+)

@@ -185,6 +185,9 @@ if st.button("Calculate New Tuition"):
         if sum(num_students) == 0 or len(current_tuition) == 0:
             st.error("Please provide valid inputs for all grade levels.")
         else:
+            # Calculate total current tuition for all students
+            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+            
             # Evenly distribute initial increase across all grades
             initial_increase_percentage = final_tuition_increase / num_grades
             adjusted_increases = [initial_increase_percentage] * num_grades

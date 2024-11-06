@@ -139,8 +139,15 @@ for i in range(int(num_items)):
     strategic_items_costs.append(item_cost)
     strategic_item_descriptions.append(item_description)
 
-# Step 5: Operations Tuition Increase (OTI) and Final Increase Calculation
-st.subheader("Step 5: Operations Tuition Increase (OTI) and Final Increase Calculation")
+# Step 5: Previous Year’s Total Expenses
+st.subheader("Step 5: Enter Previous Year's Total Expenses")
+previous_expenses_input = st.text_input("Previous Year's Total Expenses ($)", "")
+formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
+st.text(f"Formatted Previous Expenses: {formatted_previous_expenses}")
+previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", "")) if formatted_previous_expenses else 0.0
+
+# Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation
+st.subheader("Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation")
 roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
 rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
 oti = roi_percentage + rpi_percentage
@@ -148,11 +155,19 @@ total_strategic_items_cost = sum(strategic_items_costs)
 si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
 final_tuition_increase = oti + si_percentage
 
-# Step 6: Calculate New Tuition and Display Results
+# Step 7: Financial Aid (Tuition Assistance) Calculation
+st.subheader("Step 7: Financial Aid (Tuition Assistance)")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
+financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
+
+# Step 8: Calculate New Tuition and Display Results
 if st.button("Calculate New Tuition"):
     total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
     total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
     new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+    tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
     # Display Initial Results
     st.subheader("Initial Tuition Increase Results")
@@ -192,7 +207,7 @@ if st.button("Calculate New Tuition"):
 
     pdf_buffer = generate_pdf(
         report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, si_percentage, strategic_items_df,
+        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
         "Summary of tuition adjustment calculations."
     )
 

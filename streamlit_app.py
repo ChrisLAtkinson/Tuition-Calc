@@ -169,8 +169,16 @@ if st.button("Calculate New Tuition"):
     new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
     tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
-    # Display Initial Results
-    st.subheader("Initial Tuition Increase Results")
+    # Display Summary Prior to Interactive Adjustment
+    st.subheader("Summary Prior to Interactive Adjustment")
+    st.write(f"**Report Title:** {report_title}")
+    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+
+    # Interactive Adjustment Table
+    st.subheader("Adjust Tuition by Grade Level")
     tuition_data = {
         "Grade": grades,
         "Number of Students": num_students,
@@ -179,8 +187,6 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
-    # Interactive Adjustment Table
-    st.subheader("Adjust Tuition by Grade Level")
     for i in range(len(grades)):
         df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
             f"Adjusted Tuition for {grades[i]}",

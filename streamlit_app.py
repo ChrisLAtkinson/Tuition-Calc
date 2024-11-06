@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import locale
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
@@ -113,27 +112,54 @@ report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tui
 
 # Step 2: Add Custom Grade Levels and Tuition Rates
 st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
-grades = []
-num_students = []
-current_tuition = []
 num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1, step=1)
 
+# Initialize session state for grades, num_students, current_tuition, and adjusted_tuition if not already set
+if 'grades' not in st.session_state:
+    st.session_state.grades = []
+    st.session_state.num_students = []
+    st.session_state.current_tuition = []
+    st.session_state.adjusted_tuition = []
+
+# Extend lists in session state to match the number of grades, if necessary
 for i in range(num_grades):
-    grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
-    students = st.number_input(f"Number of Students in {grade}", min_value=0, step=1, value=0)
-    tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
+    if len(st.session_state.grades) <= i:
+        st.session_state.grades.append(f"Grade {i+1}")
+    if len(st.session_state.num_students) <= i:
+        st.session_state.num_students.append(0)
+    if len(st.session_state.current_tuition) <= i:
+        st.session_state.current_tuition.append(0.0)
+    if len(st.session_state.adjusted_tuition) <= i:
+        st.session_state.adjusted_tuition.append(0.0)
+
+# Collect input data for each grade
+for i in range(num_grades):
+    st.session_state.grades[i] = st.text_input(f"Grade Level {i+1} Name", st.session_state.grades[i])
+    st.session_state.num_students[i] = st.number_input(
+        f"Number of Students in {st.session_state.grades[i]}",
+        min_value=0, step=1, value=st.session_state.num_students[i]
+    )
+    tuition_input = st.text_input(f"Current Tuition per Student in {st.session_state.grades[i]} ($)", "")
     formatted_tuition = format_input_as_currency(tuition_input)
     st.text(f"Formatted Tuition: {formatted_tuition}")
-    tuition = float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
-    grades.append(grade)
-    num_students.append(students)
-    current_tuition.append(tuition)
+    st.session_state.current_tuition[i] = (
+        float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
+    )
+
+# Build the DataFrame using session state variables
+tuition_data = {
+    "Grade": st.session_state.grades,
+    "Number of Students": st.session_state.num_students,
+    "Current Tuition per Student": st.session_state.current_tuition,
+    "Adjusted New Tuition per Student": st.session_state.adjusted_tuition
+}
+df = pd.DataFrame(tuition_data)
 
 # Step 3: Automatically Calculate Average Tuition
 st.subheader("Step 3: Automatically Calculate Average Tuition")
-if sum(num_students) > 0:
-    total_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-    avg_tuition = total_tuition / sum(num_students)
+if sum(st.session_state.num_students) > 0:
+    total_tuition = sum([students * tuition for students, tuition in zip(st.session_state.num_students, st.session_state.current_tuition)])
+    avg_tuition = total_tuition / sum(st.session_state.num_students)
     st.text(f"Automatically Calculated Average Tuition per Student: {format_currency(avg_tuition)}")
 else:
     avg_tuition = 0.0
@@ -171,7 +197,7 @@ roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, ste
 rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
 oti = roi_percentage + rpi_percentage
 total_strategic_items_cost = sum(strategic_items_costs)
-si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
+si_percentage = (total_strategic_items_cost / (sum(st.session_state.num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
 final_tuition_increase = oti + si_percentage
 
 # Step 7: Financial Aid (Tuition Assistance) Calculation
@@ -183,9 +209,10 @@ financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
 
 # Step 8: Calculate New Tuition and Display Results
 if st.button("Calculate New Tuition"):
-    total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+    total_current_tuition = sum([students * tuition for students, tuition in zip(st.session_state.num_students, st.session_state.current_tuition)])
     total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in st.session_state.current_tuition]
+    st.session_state.adjusted_tuition = new_tuition_per_student  # Initialize adjusted tuition with calculated values
     tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
     # Display Summary Prior to Interactive Adjustment
@@ -198,27 +225,16 @@ if st.button("Calculate New Tuition"):
 
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
-    tuition_data = {
-        "Grade": grades,
-        "Number of Students": num_students,
-        "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": new_tuition_per_student
-    }
-    df = pd.DataFrame(tuition_data)
-
-    # Collect adjusted tuition inputs directly into the DataFrame
-    adjusted_tuitions = []
-    for i, grade in enumerate(grades):
-        adjusted_tuition = st.number_input(
+    for i, grade in enumerate(st.session_state.grades):
+        st.session_state.adjusted_tuition[i] = st.number_input(
             f"Adjusted Tuition for {grade}",
-            value=new_tuition_per_student[i],
+            value=st.session_state.adjusted_tuition[i],
             min_value=0.0,
             step=0.01
         )
-        adjusted_tuitions.append(adjusted_tuition)
 
-    # Update DataFrame with new tuition values
-    df["Adjusted New Tuition per Student"] = adjusted_tuitions
+    # Update DataFrame with adjusted tuition values
+    df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
 
     # Display the updated table with scrolling enabled

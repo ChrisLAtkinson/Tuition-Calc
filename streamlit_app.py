@@ -190,6 +190,9 @@ adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
 # Calculate the overall adjusted tuition increase percentage
 overall_increase_percentage = ((adjusted_total_tuition - total_tuition) / total_tuition) * 100 if total_tuition > 0 else 0
 
+# Set tuition assistance ratio (Placeholder value used here; modify as needed)
+tuition_assistance_ratio = 15.0  # Example value for tuition assistance ratio
+
 # Display adjusted tuition table, the updated total, and the overall increase percentage
 st.subheader("Adjusted Tuition Results")
 st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Adjusted Increase (%)", "Total Tuition for Grade"]])
@@ -198,11 +201,20 @@ st.write(f"**Overall Adjusted Tuition Increase Percentage:** {overall_increase_p
 
 # Step 6: Generate PDF with Results
 if st.button("Download PDF Report"):
+    summary_text = (
+        f"The initial tuition increase was uniformly applied across all grade levels at {final_tuition_increase}%. "
+        f"This yielded a total new tuition of {format_currency(total_initial_new_tuition)}. "
+        f"Subsequently, each grade level's tuition was manually adjusted based on demand and other considerations. "
+        f"The total adjusted tuition is now {format_currency(adjusted_total_tuition)}, with an overall adjusted increase "
+        f"of {overall_increase_percentage:.2f}% compared to the initial total tuition. "
+        f"The tuition assistance ratio is {tuition_assistance_ratio:.2f}% of the adjusted total tuition."
+    )
+
     pdf_buffer = generate_pdf(
         report_title, adjustment_df, total_current_tuition=total_tuition, total_new_tuition=adjusted_total_tuition,
-        avg_increase_percentage=overall_increase_percentage, tuition_assistance_ratio=0,  # Placeholder for tuition assistance ratio
+        avg_increase_percentage=overall_increase_percentage, tuition_assistance_ratio=tuition_assistance_ratio,
         strategic_items_df=pd.DataFrame(),  # Placeholder for strategic items
-        summary_text="The tuition increase was initially applied uniformly, then adjusted manually per grade level."
+        summary_text=summary_text
     )
 
     st.download_button(

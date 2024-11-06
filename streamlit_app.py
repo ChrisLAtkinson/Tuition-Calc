@@ -15,7 +15,7 @@ def format_currency(value):
     try:
         return locale.currency(value, grouping=True)
     except:
-        return f"<span class='math-inline'><span class="math-inline">\{\{\{value\:,\.2f\}\}\}</span\>"  \# Corrected line
+        return f"<span class='math-inline'>${{{value:,.2f}}}</span>"
 \# Function to format input strings as currency
 def format\_input\_as\_currency\(input\_value\)\:
 try\:

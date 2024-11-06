@@ -28,9 +28,9 @@ st.markdown(
 # Helper function to format numbers as currency
 def format_currency(value):
     try:
-        return locale.currency(value, grouping=True)
+        return locale.currency(float(value), grouping=True)
     except:
-        return f"${value:,.2f}"
+        return f"${float(value):,.2f}"
 
 # Function to format input strings as currency
 def format_input_as_currency(input_value):
@@ -185,7 +185,7 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-# Step 8: Calculate New Tuition and Display Results
+# Step 8: Calculate New Tuition and Display Initial Results
 if st.button("Calculate New Tuition"):
     try:
         if sum(num_students) == 0 or len(current_tuition) == 0:
@@ -202,7 +202,7 @@ if st.button("Calculate New Tuition"):
             tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
-            st.subheader("Results")
+            st.subheader("Initial Tuition Increase Results")
             st.write(f"**Report Title:** {report_title}")
             st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
             st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
@@ -214,43 +214,47 @@ if st.button("Calculate New Tuition"):
                 "Grade": grades,
                 "Number of Students": num_students,
                 "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
-                "New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
+                "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
                 "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
             }
             df = pd.DataFrame(tuition_data)
 
-            st.subheader("Tuition by Grade Level")
             st.write(df)
 
-            # Display all Strategic Items added by the user with descriptions
-            st.subheader("Strategic Items")
-            st.write(strategic_items_df)
+            # Allow users to edit adjusted tuition per grade level
+            st.subheader("Adjust Tuition by Grade Level")
+            adjustment_df = df.copy()
+            adjustment_df["Adjusted New Tuition per Student"] = [
+                st.number_input(f"Adjusted Tuition for {grade}", value=nt, min_value=0.0, step=0.01)
+                for grade, nt in zip(grades, new_tuition_per_student)
+            ]
+            adjustment_df["Adjusted Increase (%)"] = [
+                ((new - current) / current * 100) if current > 0 else 0
+                for new, current in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
+            ]
 
-            # Summary of Calculation Steps (Narrative)
+            adjusted_total_tuition = sum([students * tuition for students, tuition in zip(num_students, adjustment_df["Adjusted New Tuition per Student"])])
+            overall_adjusted_increase_percentage = ((adjusted_total_tuition - total_tuition) / total_tuition) * 100 if total_tuition > 0 else 0
+            st.write(adjustment_df)
+
+            # Summary and PDF Generation
             summary_text = f"""
             ### Summary of Calculations:
-            The tuition calculation for the 2025-26 school year was completed by considering several key factors. 
-            
-            First, we calculated the **Operations Tuition Increase (OTI)**, which reflects the impact of inflation on costs. The Rate of Inflation (ROI) was set at {roi_percentage:.2f}%, and a productivity adjustment of {rpi_percentage:.2f}% was added. Together, these factors resulted in an OTI of {oti:.2f}%.
-
-            Next, we factored in the costs of **Strategic Items**. These are investments the school plans to make to improve facilities, curriculum, or other areas. The total strategic item cost was spread across all students, resulting in a Strategic Items (SI) percentage increase of {si_percentage:.2f}%.
-
-            By combining the OTI and the SI percentage, the total tuition increase was calculated to be {final_tuition_increase:.2f}%.
-
-            Lastly, we considered financial aid. The total amount of financial aid was calculated to account for {tuition_assistance_ratio:.2f}% of the new total tuition.
+            - **Operations Tuition Increase (OTI)** based on ROI ({roi_percentage:.2f}%) and RPI ({rpi_percentage:.2f}%).
+            - **Strategic Items (SI)** accounted for a {si_percentage:.2f}% increase.
+            - **Total Tuition Increase**: {final_tuition_increase:.2f}%.
+            - **Adjusted Total Tuition**: {format_currency(adjusted_total_tuition)} with an adjusted increase of {overall_adjusted_increase_percentage:.2f}%.
             """
 
             st.subheader("Summary of Calculations")
             st.markdown(summary_text)
 
-            # Generate the PDF report
             pdf_buffer = generate_pdf(
-                report_title, df, total_current_tuition, total_new_tuition,
-                final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+                report_title, adjustment_df, total_current_tuition, adjusted_total_tuition,
+                overall_adjusted_increase_percentage, tuition_assistance_ratio, strategic_items_df,
                 summary_text
             )
 
-            # Download button for the PDF report
             st.download_button(
                 label="Download Report as PDF",
                 data=pdf_buffer,

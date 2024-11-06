@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import locale
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
@@ -52,8 +51,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     for i, row in df.iterrows():
         pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
                                   f"Current Tuition: {row['Current Tuition per Student']}, "
-                                  f"New Tuition: {row['New Tuition per Student']}, "
-                                  f"Increase Applied: {row['Increase Percentage']:.2f}%")
+                                  f"New Tuition: {row['New Tuition per Student']}")
         row_y -= 15
 
     # Strategic Items Section with descriptions

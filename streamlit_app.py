@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 import locale
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
@@ -96,68 +97,130 @@ st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
 grades = []
 num_students = []
 current_tuition = []
-if "tuition_data" not in st.session_state:
-    st.session_state.tuition_data = pd.DataFrame(columns=[
-        "Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student"
-    ])
-
 num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=1, step=1)
 
-new_rows = []
 for i in range(num_grades):
-    grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}", key=f"grade_{i}")
-    students = st.number_input(f"Number of Students in {grade}", min_value=0, value=0, step=1, key=f"students_{i}")
-    tuition = st.number_input(
-        f"Current Tuition per Student in {grade}",
-        min_value=0.0,
-        value=0.0,
-        step=0.01,
-        key=f"tuition_{i}"
-    )
-    adjusted_tuition = st.number_input(
-        f"Adjusted Tuition for {grade}",
-        value=tuition,
-        min_value=0.0,
-        step=0.01,
-        key=f"adjusted_tuition_{i}"
-    )
-    new_rows.append({
-        "Grade": grade,
-        "Number of Students": students,
-        "Current Tuition per Student": tuition,
-        "Adjusted New Tuition per Student": adjusted_tuition,
+    grade = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
+    students = st.number_input(f"Number of Students in {grade}", min_value=0, step=1, value=0)
+    tuition_input = st.text_input(f"Current Tuition per Student in {grade} ($)", "")
+    formatted_tuition = format_input_as_currency(tuition_input)
+    st.text(f"Formatted Tuition: {formatted_tuition}")
+    tuition = float(formatted_tuition.replace(",", "").replace("$", "")) if formatted_tuition else 0.0
+    grades.append(grade)
+    num_students.append(students)
+    current_tuition.append(tuition)
+
+# Step 3: Automatically Calculate Average Tuition
+st.subheader("Step 3: Automatically Calculate Average Tuition")
+if sum(num_students) > 0:
+    total_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+    avg_tuition = total_tuition / sum(num_students)
+    st.text(f"Automatically Calculated Average Tuition per Student: {format_currency(avg_tuition)}")
+else:
+    avg_tuition = 0.0
+    st.error("Please enter valid student numbers and tuition rates to calculate average tuition.")
+
+# Step 4: Add Strategic Items and Descriptions
+st.subheader("Step 4: Add Strategic Items and Descriptions")
+strategic_items_costs = []
+strategic_item_names = []
+strategic_item_descriptions = []
+num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=10, value=0, step=1)
+
+for i in range(int(num_items)):
+    item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
+    item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
+    formatted_item_cost = format_input_as_currency(item_cost_input)
+    st.text(f"Formatted Cost: {formatted_item_cost}")
+    item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
+    item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
+
+    strategic_item_names.append(item_name)
+    strategic_items_costs.append(item_cost)
+    strategic_item_descriptions.append(item_description)
+
+# Step 5: Previous Year’s Total Expenses
+st.subheader("Step 5: Enter Previous Year's Total Expenses")
+previous_expenses_input = st.text_input("Previous Year's Total Expenses ($)", "")
+formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
+st.text(f"Formatted Previous Expenses: {formatted_previous_expenses}")
+previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", "")) if formatted_previous_expenses else 0.0
+
+# Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation
+st.subheader("Step 6: Operations Tuition Increase (OTI) and Final Increase Calculation")
+roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
+rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
+oti = roi_percentage + rpi_percentage
+total_strategic_items_cost = sum(strategic_items_costs)
+si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
+final_tuition_increase = oti + si_percentage
+
+# Step 7: Financial Aid (Tuition Assistance) Calculation
+st.subheader("Step 7: Financial Aid (Tuition Assistance)")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
+financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
+
+# Step 8: Calculate New Tuition and Display Results
+if st.button("Calculate New Tuition"):
+    total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+    total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
+    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+    tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+
+    # Display Summary Prior to Interactive Adjustment
+    st.subheader("Summary Prior to Interactive Adjustment")
+    st.write(f"**Report Title:** {report_title}")
+    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+
+    # Interactive Adjustment Table
+    st.subheader("Adjust Tuition by Grade Level")
+    tuition_data = {
+        "Grade": grades,
+        "Number of Students": num_students,
+        "Current Tuition per Student": current_tuition,
+        "Adjusted New Tuition per Student": new_tuition_per_student
+    }
+    df = pd.DataFrame(tuition_data)
+
+    # Collect adjusted tuition inputs directly into the DataFrame
+    for i in range(len(grades)):
+        adjusted_tuition = st.number_input(
+            f"Adjusted Tuition for {grades[i]}",
+            value=new_tuition_per_student[i],
+            min_value=0.0,
+            step=0.01
+        )
+        df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
+
+    # Calculate adjusted totals and differences
+    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+
+    # Display Adjusted Total
+    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+
+    # Generate the PDF report
+    strategic_items_df = pd.DataFrame({
+        "Strategic Item": strategic_item_names,
+        "Cost ($)": strategic_items_costs,
+        "Description": strategic_item_descriptions
     })
 
-st.session_state.tuition_data = pd.concat([st.session_state.tuition_data, pd.DataFrame(new_rows)], ignore_index=True)
-
-# Step 3: Display Tuition Data
-df = st.session_state.tuition_data.copy()
-df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-
-st.subheader("Tuition Adjustment Table")
-st.write(df)
-
-# Step 4: Summary and Calculations
-total_current_tuition = df["Number of Students"] * df["Current Tuition per Student"]
-total_adjusted_tuition = df["Total Tuition for Grade"].sum()
-
-st.write(f"**Adjusted Total Tuition:** {format_currency(total_adjusted_tuition)}")
-st.write(f"**Difference from Current Tuition Total:** {format_currency(total_current_tuition.sum() - total_adjusted_tuition)}")
-
-# Step 5: Generate PDF Report
-if st.button("Generate PDF Report"):
     pdf_buffer = generate_pdf(
-        report_title,
-        df,
-        total_current_tuition.sum(),
-        total_adjusted_tuition,
-        0,  # Replace with actual percentage if applicable
-        0,  # Replace with tuition assistance ratio if applicable
-        pd.DataFrame(),  # Replace with strategic items DataFrame if applicable
+        report_title, df, total_current_tuition, adjusted_total_tuition,
+        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
         "Summary of tuition adjustment calculations."
     )
+
     st.download_button(
-        label="Download PDF Report",
+        label="Download Report as PDF",
         data=pdf_buffer,
         file_name="tuition_report.pdf",
         mime="application/pdf"

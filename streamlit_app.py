@@ -168,14 +168,24 @@ if st.button("Calculate New Tuition"):
 
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
-    adjustment_df = df.copy()
-    adjustment_df["Adjusted New Tuition per Student"] = [
-        st.number_input(f"Adjusted Tuition for {grade}", value=float(nt.replace("$", "").replace(",", "")), min_value=0.0, step=0.01)
-        for grade, nt in zip(grades, new_tuition_per_student)
-    ]
+    adjustment_df = pd.DataFrame({
+        "Grade": grades,
+        "Number of Students": num_students,
+        "Current Tuition per Student": current_tuition,
+        "Adjusted New Tuition per Student": new_tuition_per_student
+    })
+
+    for i in range(len(grades)):
+        adjustment_df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+            f"Adjusted Tuition for {grades[i]}",
+            value=new_tuition_per_student[i],
+            min_value=0.0,
+            step=0.01
+        )
+
+    # Calculate adjusted totals and differences
     adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
-
     st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 
     # Display Adjusted Total

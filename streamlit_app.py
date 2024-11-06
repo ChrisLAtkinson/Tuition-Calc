@@ -169,7 +169,7 @@ st.text(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 # Step 5: Operations Tuition Increase (OTI) Calculation
 st.subheader("Step 5: Operations Tuition Increase (OTI) Calculation")
 roi_percentage = st.number_input("Rate of Inflation (ROI) %", min_value=0.0, step=0.01, value=3.32)
-rpi_percentage = 2.08  # Fixed rate of productivity improvement
+rpi_percentage = st.number_input("Rate of Productivity Increase (RPI) %", min_value=0.0, step=0.01, value=2.08)
 oti = roi_percentage + rpi_percentage
 st.text(f"Operations Tuition Increase (OTI): {oti:.2f}%")
 

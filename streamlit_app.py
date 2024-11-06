@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import locale
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
@@ -86,7 +85,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     return buffer
 
 # Streamlit App Start
-st.title("Tuition Calculation Tool")
+st.title("Tuition Calculation and Adjustment Tool")
 
 # Step 1: Enter a Custom Title for the Report
 st.subheader("Step 1: Enter a Custom Title for the Report")
@@ -134,7 +133,6 @@ for i in range(int(num_items)):
     st.text(f"Formatted Cost: {formatted_item_cost}")
     item_cost = float(formatted_item_cost.replace(",", "").replace("$", "")) if formatted_item_cost else 0.0
     item_description = st.text_area(f"Description for {item_name}", f"Enter a description for {item_name}")
-
     strategic_item_names.append(item_name)
     strategic_items_costs.append(item_cost)
     strategic_item_descriptions.append(item_description)
@@ -173,53 +171,4 @@ if st.button("Calculate New Tuition"):
     st.subheader("Summary Prior to Interactive Adjustment")
     st.write(f"**Report Title:** {report_title}")
     st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-    # Interactive Adjustment Table
-    st.subheader("Adjust Tuition by Grade Level")
-    tuition_data = {
-        "Grade": grades,
-        "Number of Students": num_students,
-        "Current Tuition per Student": current_tuition,
-        "Adjusted New Tuition per Student": new_tuition_per_student
-    }
-    df = pd.DataFrame(tuition_data)
-
-    for i in range(len(grades)):
-        df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
-            value=new_tuition_per_student[i],
-            min_value=0.0,
-            step=0.01
-        )
-
-    # Calculate adjusted totals and differences
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-
-    # Display Adjusted Total
-    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
-
-    # Generate the PDF report
-    strategic_items_df = pd.DataFrame({
-        "Strategic Item": strategic_item_names,
-        "Cost ($)": strategic_items_costs,
-        "Description": strategic_item_descriptions
-    })
-
-    pdf_buffer = generate_pdf(
-        report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-        "Summary of tuition adjustment calculations."
-    )
-
-    st.download_button(
-        label="Download Report as PDF",
-        data=pdf_buffer,
-        file_name="tuition_report.pdf",
-        mime="application/pdf"
-    )
+    st.write(f"**Total New Tuition

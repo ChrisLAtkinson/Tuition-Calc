@@ -154,10 +154,6 @@ total_strategic_items_cost = sum(strategic_items_costs)
 si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
 final_tuition_increase = oti + si_percentage
 
-# Calculate the total new tuition before adjustments
-total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
-total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-
 # Step 7: Financial Aid (Tuition Assistance) Calculation
 st.subheader("Step 7: Financial Aid (Tuition Assistance)")
 financial_aid_input = st.text_input("Total Financial Aid ($)", "")
@@ -165,55 +161,68 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
-# Step 8: Real-Time Tuition Adjustment and Results
-st.subheader("Adjust Tuition by Grade Level")
-tuition_data = {
-    "Grade": grades,
-    "Number of Students": num_students,
-    "Current Tuition per Student": current_tuition,
-    "Adjusted New Tuition per Student": [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
-}
-df = pd.DataFrame(tuition_data)
+# Step 8: Calculate New Tuition and Display Results
+if st.button("Calculate New Tuition"):
+    total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+    total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
+    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+    tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
-# Allow user to interactively adjust tuition per grade
-for i in range(len(grades)):
-    adjusted_tuition = st.number_input(
-        f"Adjusted Tuition for {grades[i]}",
-        value=df.at[i, "Adjusted New Tuition per Student"],
-        min_value=0.0,
-        step=0.01,
-        key=f"adjusted_tuition_{i}"
+    # Display Summary Prior to Interactive Adjustment
+    st.subheader("Summary Prior to Interactive Adjustment")
+    st.write(f"**Report Title:** {report_title}")
+    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+
+    # Interactive Adjustment Table
+    st.subheader("Adjust Tuition by Grade Level")
+    tuition_data = {
+        "Grade": grades,
+        "Number of Students": num_students,
+        "Current Tuition per Student": current_tuition,
+        "Adjusted New Tuition per Student": new_tuition_per_student
+    }
+    df = pd.DataFrame(tuition_data)
+
+    # Editable tuition column for real-time adjustment
+    for i in range(len(grades)):
+        df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+            f"Adjusted Tuition for {grades[i]}",
+            value=new_tuition_per_student[i],
+            min_value=0.0,
+            step=0.01,
+            key=f"adjusted_tuition_{i}"
+        )
+
+    # Recalculate totals and differences
+    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+
+    # Display the updated table
+    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+
+    # Display adjusted totals and differences
+    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+
+    # Generate the PDF report
+    strategic_items_df = pd.DataFrame({
+        "Strategic Item": strategic_item_names,
+        "Cost ($)": strategic_items_costs,
+        "Description": strategic_item_descriptions
+    })
+
+    pdf_buffer = generate_pdf(
+        report_title, df, total_current_tuition, adjusted_total_tuition,
+        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
+        "Summary of tuition adjustment calculations."
     )
-    df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
 
-# Calculate adjusted totals
-df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
-
-# Display updated results
-st.write(df[["Grade", "Number of Students", "Current Tuition per Student",
-             "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
-st.write(f"**Updated Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-# Generate and download updated PDF report
-strategic_items_df = pd.DataFrame({
-    "Strategic Item": strategic_item_names,
-    "Cost ($)": strategic_items_costs,
-    "Description": strategic_item_descriptions
-})
-
-pdf_buffer = generate_pdf(
-    report_title, df, total_current_tuition, adjusted_total_tuition,
-    final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-    "Updated summary of tuition adjustment calculations based on user inputs."
-)
-
-st.download_button(
-    label="Download Updated Report as PDF",
-    data=pdf_buffer,
-    file_name="adjusted_tuition_report.pdf",
-    mime="application/pdf"
-)
+    st.download_button(
+        label="Download Report as PDF",
+        data=pdf_buffer,
+        file_name="tuition_report.pdf",
+        mime="application/pdf"
+    )

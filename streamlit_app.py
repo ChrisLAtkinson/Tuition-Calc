@@ -43,8 +43,17 @@ class CustomEncoder(json.JSONEncoder):
 
 # Function to generate a downloadable PDF report
 def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg_increase_percentage, tuition_assistance_ratio, strategic_items_df, summary_text):
-    # ... (PDF generation remains the same)
-    pass # Placeholder for PDF generation logic
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Title of the report
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(50, height - 50, f"Report Title: {report_title}")
+
+    # ... (rest of the PDF generation code remains the same)
+
+    return buffer
 
 st.title("Tuition Calculation Tool")
 
@@ -154,7 +163,11 @@ if st.button("Calculate New Tuition"):
         st.session_state['adjusted_tuition_df'] = df.to_json(orient='records')
 
     # Convert back from JSON for editing
-    edited_df = pd.DataFrame(json.loads(st.session_state['adjusted_tuition_df']))
+    data = st.session_state['adjusted_tuition_df']
+    if isinstance(data, str):
+        edited_df = pd.read_json(data, orient='records')
+    else:
+        edited_df = pd.DataFrame(data) if not isinstance(data, pd.DataFrame) else data
 
     # Interactive Adjustment Table using st.data_editor
     st.subheader("Adjust Tuition by Grade Level")

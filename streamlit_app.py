@@ -128,7 +128,7 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-    # Interactive Adjustment Table
+    # Interactive Adjustment Table using st.data_editor
     st.subheader("Adjust Tuition by Grade Level")
     tuition_data = {
         "Grade": grades,
@@ -138,25 +138,36 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
-    # Use session state to persist changes in the interactive table
-    if 'adjusted_tuition' not in st.session_state:
-        st.session_state['adjusted_tuition'] = new_tuition_per_student
+    # Use session_state for persistence
+    if 'adjusted_tuition_df' not in st.session_state:
+        st.session_state['adjusted_tuition_df'] = df.copy()
 
-    for i in range(len(grades)):
-        st.session_state['adjusted_tuition'][i] = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
-            value=st.session_state['adjusted_tuition'][i],
-            min_value=0.0,
-            step=0.01,
-            key=f"tuition_{i}"
-        )
+    edited_df = st.data_editor(
+        data=st.session_state['adjusted_tuition_df'],
+        use_container_width=True,
+        column_config={
+            "Number of Students": st.column_config.NumberColumn(
+                "Number of Students", min_value=0, step=1, format="%.0f"
+            ),
+            "Current Tuition per Student": st.column_config.NumberColumn(
+                "Current Tuition per Student", format=format_currency
+            ),
+            "Adjusted New Tuition per Student": st.column_config.NumberColumn(
+                "Adjusted New Tuition per Student", format=format_currency
+            ),
+        },
+    )
 
-    # Update dataframe with session state values
-    df["Adjusted New Tuition per Student"] = st.session_state['adjusted_tuition']
+    # Update session_state with edited data
+    st.session_state['adjusted_tuition_df'] = edited_df
+
+    # Display the adjusted data
+    st.write("**Adjusted Tuition Data:**")
+    st.write(edited_df)
+
+    # Calculate adjusted totals and differences
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 
     # Display Adjusted Total
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")

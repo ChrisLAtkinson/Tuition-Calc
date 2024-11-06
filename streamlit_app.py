@@ -11,14 +11,18 @@ import textwrap
 st.set_page_config(layout="wide")
 
 # Configure locale for currency formatting
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+except locale.Error:
+    # Fall back to the default locale if 'en_US.UTF-8' is not available
+    locale.setlocale(locale.LC_ALL, '')
 
 # Helper function to format numbers as currency
 def format_currency(value):
     try:
         return locale.currency(value, grouping=True)
     except:
-        return f"${value:,.2f}"
+        return f"${value:,.2f}"  # Default formatting if locale is not set
 
 # Function to format input strings as currency
 def format_input_as_currency(input_value):

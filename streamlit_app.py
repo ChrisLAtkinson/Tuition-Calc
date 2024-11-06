@@ -162,23 +162,28 @@ st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
 # Step 8: Calculate New Tuition and Display Results
-if st.button("Calculate New Tuition"):
+if "calculated" not in st.session_state:
+    st.session_state.calculated = False  # Keep track of whether the calculation has been triggered
+
+if st.button("Calculate New Tuition") or st.session_state.calculated:
+    # Ensure calculations are run only once when the button is pressed
+    st.session_state.calculated = True
+
+    # Initial tuition calculations
     total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
     total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
-    new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
-    tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
+    if "adjusted_tuition" not in st.session_state:
+        st.session_state.adjusted_tuition = [
+            tuition * (1 + final_tuition_increase / 100) for tuition in current_tuition
+        ]
 
-    # Display Summary Prior to Interactive Adjustment
+    # Summary Prior to Interactive Adjustment
     st.subheader("Summary Prior to Interactive Adjustment")
     st.write(f"**Report Title:** {report_title}")
     st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
     st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-    # Initialize session state for interactive adjustments
-    if "adjusted_tuition" not in st.session_state:
-        st.session_state.adjusted_tuition = new_tuition_per_student
+    st.write(f"**Tuition Assistance Ratio:** {(financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0:.2f}%")
 
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
@@ -190,17 +195,17 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
-    # Editable tuition column for real-time adjustment
-    for i in range(len(grades)):
+    # Editable tuition column
+    for i, grade in enumerate(grades):
         st.session_state.adjusted_tuition[i] = st.number_input(
-            f"Adjusted Tuition for {grades[i]}",
+            f"Adjusted Tuition for {grade}",
             value=st.session_state.adjusted_tuition[i],
             min_value=0.0,
             step=0.01,
             key=f"adjusted_tuition_{i}"
         )
 
-    # Update the DataFrame with session state values
+    # Update DataFrame with the adjusted values
     df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
@@ -212,17 +217,16 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
 
-    # Generate the PDF report
+    # Generate PDF
     strategic_items_df = pd.DataFrame({
         "Strategic Item": strategic_item_names,
         "Cost ($)": strategic_items_costs,
         "Description": strategic_item_descriptions
     })
-
     pdf_buffer = generate_pdf(
         report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, tuition_assistance_ratio, strategic_items_df,
-        "Summary of tuition adjustment calculations."
+        final_tuition_increase, (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0,
+        strategic_items_df, "Summary of tuition adjustment calculations."
     )
 
     st.download_button(

@@ -187,13 +187,15 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
+    # Collect adjusted tuition inputs directly into the DataFrame
     for i in range(len(grades)):
-        df.at[i, "Adjusted New Tuition per Student"] = st.number_input(
+        adjusted_tuition = st.number_input(
             f"Adjusted Tuition for {grades[i]}",
             value=new_tuition_per_student[i],
             min_value=0.0,
             step=0.01
         )
+        df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
 
     # Calculate adjusted totals and differences
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]

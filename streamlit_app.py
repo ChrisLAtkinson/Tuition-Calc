@@ -66,9 +66,9 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     pdf.setFont("Helvetica", 10)
     for i, row in df.iterrows():
         pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students, "
-                                  f"Current Tuition: {row['Current Tuition per Student']}, "
-                                  f"New Tuition: {row['New Tuition per Student']}, "
-                                  f"Increase Percentage: {row['Increase Percentage']:.2f}%")
+                                  f"Current Tuition: {format_currency(row['Current Tuition per Student'])}, "
+                                  f"Adjusted New Tuition: {format_currency(row['Adjusted New Tuition per Student'])}, "
+                                  f"Increase Percentage: {row['Adjusted Increase (%)']:.2f}%")
         row_y -= 15
 
     # Strategic Items Section with descriptions
@@ -187,16 +187,20 @@ adjustment_df["Adjusted Increase (%)"] = [
 adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted New Tuition per Student"]
 adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
 
-# Display adjusted tuition table and the updated total in a non-scrollable, full-width DataFrame
+# Calculate the overall adjusted tuition increase percentage
+overall_increase_percentage = ((adjusted_total_tuition - total_tuition) / total_tuition) * 100 if total_tuition > 0 else 0
+
+# Display adjusted tuition table, the updated total, and the overall increase percentage
 st.subheader("Adjusted Tuition Results")
 st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Adjusted Increase (%)", "Total Tuition for Grade"]])
 st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
+st.write(f"**Overall Adjusted Tuition Increase Percentage:** {overall_increase_percentage:.2f}%")
 
 # Step 6: Generate PDF with Results
 if st.button("Download PDF Report"):
     pdf_buffer = generate_pdf(
         report_title, adjustment_df, total_current_tuition=total_tuition, total_new_tuition=adjusted_total_tuition,
-        avg_increase_percentage=final_tuition_increase, tuition_assistance_ratio=0,  # Placeholder for tuition assistance ratio
+        avg_increase_percentage=overall_increase_percentage, tuition_assistance_ratio=0,  # Placeholder for tuition assistance ratio
         strategic_items_df=pd.DataFrame(),  # Placeholder for strategic items
         summary_text="The tuition increase was initially applied uniformly, then adjusted manually per grade level."
     )

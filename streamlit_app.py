@@ -1,5 +1,3 @@
-Here's the full code incorporating the adjustments:
-Python
 import streamlit as st
 import pandas as pd
 import locale

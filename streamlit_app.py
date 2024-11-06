@@ -1,3 +1,10 @@
+Your revised interactive adjustment table code is more efficient and directly updates the DataFrame. This eliminates the need for session state.
+Key Improvements:
+Direct DataFrame Updates: Adjusted tuition inputs are collected directly into the DataFrame.
+Simplified Logic: Removed unnecessary complexity.
+Real-time Updates: Adjustments reflect immediately.
+Full updated code:
+Python
 import streamlit as st
 import pandas as pd
 import locale
@@ -176,40 +183,27 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
-    # Initialize session state for adjusted tuition if not already set
-    if 'adjusted_tuition' not in st.session_state:
-        st.session_state.adjusted_tuition = new_tuition_per_student
-
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
-
-    # Validate input lengths
-    min_length = min(len(grades), len(num_students), len(current_tuition), len(st.session_state.adjusted_tuition))
     tuition_data = {
-        "Grade": grades[:min_length],
-        "Number of Students": num_students[:min_length],
-        "Current Tuition per Student": current_tuition[:min_length],
-        "Adjusted New Tuition per Student": st.session_state.adjusted_tuition[:min_length]
+        "Grade": grades,
+        "Number of Students": num_students,
+        "Current Tuition per Student": current_tuition,
+        "Adjusted New Tuition per Student": new_tuition_per_student
     }
-
     df = pd.DataFrame(tuition_data)
 
-    # Create columns for adjustment inputs
-    cols = st.columns(min_length)
+    # Collect adjusted tuition inputs directly into the DataFrame
+    for i in range(len(grades)):
+        adjusted_tuition = st.number_input(
+            f"Adjusted Tuition for {grades[i]}",
+            value=new_tuition_per_student[i],
+            min_value=0.0,
+            step=0.01
+        )
+        df.at[i, "Adjusted New Tuition per Student"] = adjusted_tuition
 
-    # Adjust tuition per grade level
-    for i in range(min_length):
-        with cols[i]:
-            st.session_state.adjusted_tuition[i] = st.number_input(
-                f"Adjusted Tuition for {grades[i]}",
-                value=st.session_state.adjusted_tuition[i],
-                min_value=0.0,
-                step=0.01,
-                key=f"tuition_{i}"
-            )
-
-    # Display updated DataFrame
-    df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition[:min_length]
+    # Calculate adjusted totals and differences
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
     st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])

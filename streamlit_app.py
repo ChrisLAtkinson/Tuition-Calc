@@ -213,9 +213,15 @@ if st.button("Calculate New Tuition") or st.session_state.calculated:
     # Display the updated table
     st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 
-    # Display adjusted totals and differences
+    # Display adjusted totals and additional calculations
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+
+    # Add Additional Calculations Summary
+    st.subheader("Adjusted Tuition Summary")
+    st.write(f"**Total New Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {(financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0:.2f}%")
 
     # Generate PDF
     strategic_items_df = pd.DataFrame({
@@ -235,3 +241,28 @@ if st.button("Calculate New Tuition") or st.session_state.calculated:
         file_name="tuition_report.pdf",
         mime="application/pdf"
     )
+
+    # Plotly Chart: Tuition Distribution
+    import plotly.express as px
+    st.subheader("Tuition Distribution by Grade Level")
+    fig = px.bar(
+        df,
+        x="Grade",
+        y="Total Tuition for Grade",
+        title="Total Tuition Distribution",
+        labels={"Total Tuition for Grade": "Total Tuition ($)", "Grade": "Grade Level"},
+        text="Total Tuition for Grade"
+    )
+    fig.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Chart: Tuition Adjustments
+    fig_adjustments = px.line(
+        df,
+        x="Grade",
+        y=["Current Tuition per Student", "Adjusted New Tuition per Student"],
+        title="Current vs Adjusted Tuition",
+        labels={"value": "Tuition ($)", "Grade": "Grade Level", "variable": "Tuition Type"}
+    )
+    st.plotly_chart(fig_adjustments, use_container_width=True)

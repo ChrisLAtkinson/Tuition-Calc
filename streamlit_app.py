@@ -174,3 +174,59 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
+
+# After displaying the results
+if st.button("Adjust Tuition by Grade Level"):
+    st.subheader("Distribute Tuition Adjustments by Grade Level")
+    st.write(
+        "Use the inputs below to adjust tuition amounts for each grade level "
+        "and try to match the total new adjusted tuition."
+    )
+
+    # Initialize session state for adjusted tuition if not already set
+    if "grade_level_adjustments" not in st.session_state:
+        st.session_state.grade_level_adjustments = {
+            grade: new_tuition_per_student[i] for i, grade in enumerate(grades)
+        }
+
+    # Create a DataFrame for the interactive adjustment
+    adjustment_df = pd.DataFrame({
+        "Grade": grades,
+        "Number of Students": num_students,
+        "Current Tuition": current_tuition,
+        "Target Tuition per Student": new_tuition_per_student,
+        "Adjusted Tuition per Student": [
+            st.session_state.grade_level_adjustments[grade] for grade in grades
+        ],
+    })
+
+    # Create inputs for each grade's adjusted tuition
+    for i, grade in enumerate(grades):
+        adjustment_df.at[i, "Adjusted Tuition per Student"] = st.number_input(
+            f"Adjusted Tuition for {grade}",
+            value=st.session_state.grade_level_adjustments[grade],
+            min_value=0.0,
+            step=0.01,
+            key=f"adjustment_{grade}",
+        )
+        st.session_state.grade_level_adjustments[grade] = adjustment_df.at[i, "Adjusted Tuition per Student"]
+
+    # Calculate total adjusted tuition and difference
+    adjustment_df["Total Tuition for Grade"] = adjustment_df["Number of Students"] * adjustment_df["Adjusted Tuition per Student"]
+    adjusted_total_tuition = adjustment_df["Total Tuition for Grade"].sum()
+    difference_from_target = total_new_tuition - adjusted_total_tuition
+
+    # Display the adjusted table
+    st.write(adjustment_df[["Grade", "Number of Students", "Current Tuition", "Target Tuition per Student", "Adjusted Tuition per Student", "Total Tuition for Grade"]])
+
+    # Display the total and difference
+    st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Difference from Target Adjusted Tuition:** {format_currency(difference_from_target)}")
+
+    # Provide feedback to the user
+    if abs(difference_from_target) < 1e-2:  # Tolerance to consider as "matched"
+        st.success("Great job! The adjusted tuition matches the target adjusted tuition.")
+    elif difference_from_target > 0:
+        st.warning(f"You need to increase the tuition by {format_currency(difference_from_target)} to match the target.")
+    else:
+        st.warning(f"You need to decrease the tuition by {format_currency(abs(difference_from_target))} to match the target.")

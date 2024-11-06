@@ -192,13 +192,13 @@ if st.button("Calculate New Tuition"):
             st.error("Please provide valid inputs for all grade levels.")
         else:
             # Calculate total current tuition
-            total_current_tuition = sum([students * tuition for students, tuition in zip(num_students, current_tuition)])
+            total_current_tuition = sum([students * float(tuition) for students, tuition in zip(num_students, current_tuition)])
             
             # Calculate the new total tuition by applying the final increase
             total_new_tuition = total_current_tuition * (1 + final_tuition_increase / 100)
             
             # Calculate the average increase per student
-            new_tuition_per_student = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+            new_tuition_per_student = [(float(tuition) * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
             tuition_assistance_ratio = (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0
 
             # Display Results
@@ -215,7 +215,7 @@ if st.button("Calculate New Tuition"):
                 "Number of Students": num_students,
                 "Current Tuition per Student": [format_currency(tuition) for tuition in current_tuition],
                 "Adjusted New Tuition per Student": [format_currency(nt) for nt in new_tuition_per_student],
-                "Increase per Student": [format_currency(nt - tuition) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
+                "Increase per Student": [format_currency(nt - float(tuition)) for nt, tuition in zip(new_tuition_per_student, current_tuition)]
             }
             df = pd.DataFrame(tuition_data)
 
@@ -229,7 +229,7 @@ if st.button("Calculate New Tuition"):
                 for grade, nt in zip(grades, new_tuition_per_student)
             ]
             adjustment_df["Adjusted Increase (%)"] = [
-                ((new - current) / current * 100) if current > 0 else 0
+                ((new - float(current)) / float(current) * 100) if current > 0 else 0
                 for new, current in zip(adjustment_df["Adjusted New Tuition per Student"], current_tuition)
             ]
 

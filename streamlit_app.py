@@ -177,14 +177,6 @@ if st.button("Calculate New Tuition") or st.session_state.calculated:
             tuition * (1 + final_tuition_increase / 100) for tuition in current_tuition
         ]
 
-    # Summary Prior to Interactive Adjustment
-    st.subheader("Summary Prior to Interactive Adjustment")
-    st.write(f"**Report Title:** {report_title}")
-    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
-    st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
-    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {(financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0:.2f}%")
-
     # Interactive Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")
     tuition_data = {
@@ -210,18 +202,26 @@ if st.button("Calculate New Tuition") or st.session_state.calculated:
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
 
+    # Calculate Adjusted Metrics
+    adjusted_final_tuition_increase = (
+        (adjusted_total_tuition / total_current_tuition - 1) * 100 if total_current_tuition > 0 else 0.0
+    )
+    adjusted_tuition_assistance_ratio = (
+        (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
+    )
+
     # Display the updated table
     st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
 
-    # Display adjusted totals and additional calculations
+    # Display adjusted totals and differences
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
 
     # Add Additional Calculations Summary
     st.subheader("Adjusted Tuition Summary")
     st.write(f"**Total New Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {(financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0:.2f}%")
+    st.write(f"**Final Tuition Increase Percentage:** {adjusted_final_tuition_increase:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {adjusted_tuition_assistance_ratio:.2f}%")
 
     # Generate PDF
     strategic_items_df = pd.DataFrame({
@@ -231,7 +231,7 @@ if st.button("Calculate New Tuition") or st.session_state.calculated:
     })
     pdf_buffer = generate_pdf(
         report_title, df, total_current_tuition, adjusted_total_tuition,
-        final_tuition_increase, (financial_aid / total_new_tuition) * 100 if total_new_tuition > 0 else 0.0,
+        adjusted_final_tuition_increase, adjusted_tuition_assistance_ratio,
         strategic_items_df, "Summary of tuition adjustment calculations."
     )
 

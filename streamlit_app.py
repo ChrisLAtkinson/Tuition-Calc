@@ -84,6 +84,7 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     buffer.seek(0)
     return buffer
 
+
 # Streamlit App Start
 st.title("Tuition Calculation Tool")
 

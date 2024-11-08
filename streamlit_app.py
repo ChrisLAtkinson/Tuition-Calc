@@ -94,21 +94,41 @@ report_title = st.text_input("Enter a Custom Title for the Report", "2025-26 Tui
 
 # Step 2: Add Custom Grade Levels and Tuition Rates
 st.subheader("Step 2: Add Custom Grade Levels and Tuition Rates")
+
+# Initialize grades data in session state if not already present
 if "grades_data" not in st.session_state:
     st.session_state.grades_data = {"grades": [], "num_students": [], "current_tuition": []}
 
 grades_data = st.session_state.grades_data
-num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, value=len(grades_data["grades"]), step=1)
 
+# Ensure the value respects the minimum constraint
+num_grades = st.number_input(
+    "Number of Grade Levels",
+    min_value=1,
+    max_value=12,
+    value=max(1, len(grades_data["grades"])),  # Ensure the value is at least 1
+    step=1
+)
+
+# Adjust grades_data to match the selected number of grades
+while len(grades_data["grades"]) < num_grades:
+    grades_data["grades"].append(f"Grade {len(grades_data['grades']) + 1}")
+    grades_data["num_students"].append(0)
+    grades_data["current_tuition"].append(0.0)
+
+while len(grades_data["grades"]) > num_grades:
+    grades_data["grades"].pop()
+    grades_data["num_students"].pop()
+    grades_data["current_tuition"].pop()
+
+# Collect user inputs for each grade level
 for i in range(num_grades):
-    if len(grades_data["grades"]) <= i:
-        grades_data["grades"].append(f"Grade {i+1}")
-        grades_data["num_students"].append(0)
-        grades_data["current_tuition"].append(0.0)
-
     grades_data["grades"][i] = st.text_input(f"Grade Level {i+1} Name", grades_data["grades"][i])
     grades_data["num_students"][i] = st.number_input(
-        f"Number of Students in {grades_data['grades'][i]}", value=grades_data["num_students"][i], min_value=0, step=1
+        f"Number of Students in {grades_data['grades'][i]}",
+        min_value=0,
+        step=1,
+        value=grades_data["num_students"][i]
     )
     tuition_input = st.text_input(
         f"Current Tuition per Student in {grades_data['grades'][i]} ($)", 

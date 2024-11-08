@@ -154,6 +154,13 @@ total_strategic_items_cost = sum(strategic_items_costs)
 si_percentage = (total_strategic_items_cost / (sum(num_students) * avg_tuition)) * 100 if avg_tuition > 0 else 0.0
 final_tuition_increase = oti + si_percentage
 
+# Step 7: Financial Aid (Tuition Assistance) Calculation
+st.subheader("Step 7: Financial Aid (Tuition Assistance)")
+financial_aid_input = st.text_input("Total Financial Aid ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
+financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
+
 # Add "Calculate New Tuition" button
 if st.button("Calculate New Tuition"):
     # Calculate the total new tuition before adjustments

@@ -221,11 +221,13 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
 
+    # Initialize adjusted tuition state if not already present
     if "adjusted_tuition" not in st.session_state:
         st.session_state.adjusted_tuition = [
             tuition * (1 + final_tuition_increase / 100) for tuition in grades_data["current_tuition"]
         ]
 
+    # Interactive Table: Adjust Tuition by Grade Level
     st.subheader("Adjust Tuition by Grade Level")
     tuition_data = {
         "Grade": grades_data["grades"],
@@ -235,6 +237,7 @@ if st.button("Calculate New Tuition"):
     }
     df = pd.DataFrame(tuition_data)
 
+    # Render the interactive number inputs dynamically
     for i in range(len(grades_data["grades"])):
         st.session_state.adjusted_tuition[i] = st.number_input(
             f"Adjusted Tuition for {grades_data['grades'][i]}",
@@ -244,16 +247,19 @@ if st.button("Calculate New Tuition"):
             key=f"adjusted_tuition_{i}",
         )
 
+    # Update DataFrame with adjusted tuition values
     df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
     adjusted_total_tuition = df["Total Tuition for Grade"].sum()
     updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 
+    # Display the updated table and calculations
     st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
     st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
 
+    # Generate PDF with updated values
     strategic_items_df = pd.DataFrame(
         {
             "Strategic Item": strategic_items["names"],

@@ -161,6 +161,10 @@ formatted_financial_aid = format_input_as_currency(financial_aid_input)
 st.text(f"Formatted Financial Aid: {formatted_financial_aid}")
 financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", "")) if formatted_financial_aid else 0.0
 
+# Initialize session state for adjusted tuition
+if "adjusted_tuition" not in st.session_state:
+    st.session_state.adjusted_tuition = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
+
 # Add "Calculate New Tuition" button
 if st.button("Calculate New Tuition"):
     # Calculate the total new tuition before adjustments
@@ -175,10 +179,6 @@ if st.button("Calculate New Tuition"):
     st.write(f"**Total New Tuition:** {format_currency(total_new_tuition)}")
     st.write(f"**Final Tuition Increase Percentage:** {final_tuition_increase:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {tuition_assistance_ratio:.2f}%")
-
-    # Initialize session state for adjusted tuition values
-    if "adjusted_tuition" not in st.session_state:
-        st.session_state.adjusted_tuition = [(tuition * (1 + final_tuition_increase / 100)) for tuition in current_tuition]
 
     # Interactive Tuition Adjustment Table
     st.subheader("Adjust Tuition by Grade Level")

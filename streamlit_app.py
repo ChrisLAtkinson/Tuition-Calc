@@ -296,4 +296,34 @@ if st.session_state.calculated_values is not None:
 
     # Calculate updated totals and metrics
     total_current_tuition = sum(df["Number of Students"] * df["Current Tuition per Student"])
-    adjuste
+    adjusted_total_tuition = sum(df["Total Tuition for Grade"])
+    tuition_increase_percentage = ((adjusted_total_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0.0
+    updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
+
+    # Display updated totals
+    st.write("**Adjusted Results:**")
+    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {tuition_increase_percentage:.2f}%")
+    st.write(f"**Final Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
+
+    # Button to generate PDF
+    if st.button("Download PDF Report"):
+        original_calculations = st.session_state.calculated_values
+        pdf_buffer = generate_pdf(
+            report_title,
+            df,
+            total_current_tuition,
+            adjusted_total_tuition,
+            tuition_increase_percentage,
+            updated_tuition_assistance_ratio,
+            strategic_items_df,
+            original_calculations,
+            financial_aid
+        )
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_buffer,
+            file_name="tuition_report.pdf",
+            mime="application/pdf"
+        )

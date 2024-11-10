@@ -158,4 +158,32 @@ if st.session_state.calculated_values is not None:
     # Comparison Table for Grade-Level Adjustments
     st.subheader("Comparison of Tuition Before and After Adjustments")
     adjustment_comparison_data = {
- 
+        "Grade": df["Grade"],
+        "Number of Students": df["Number of Students"],
+        "Original Tuition per Student": df["Current Tuition per Student"],
+        "Adjusted Tuition per Student (Final)": df["Adjusted New Tuition per Student"],
+        "Difference": df["Adjusted New Tuition per Student"] - df["Current Tuition per Student"],
+    }
+    adjustment_comparison_df = pd.DataFrame(adjustment_comparison_data)
+    st.dataframe(adjustment_comparison_df)
+
+    # Button to generate PDF
+    if st.button("Download PDF Report"):
+        original_calculations = st.session_state.calculated_values
+        pdf_buffer = generate_pdf(
+            report_title,
+            df,
+            total_current_tuition,
+            adjusted_total_tuition,
+            tuition_increase_percentage,
+            updated_tuition_assistance_ratio,
+            strategic_items_df,
+            original_calculations,
+            financial_aid
+        )
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_buffer,
+            file_name="tuition_report.pdf",
+            mime="application/pdf"
+        )

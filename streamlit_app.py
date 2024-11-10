@@ -243,11 +243,7 @@ if st.button("Calculate New Tuition"):
 if st.session_state.calculated_values is not None:
     st.subheader("Results")
     st.write(f"**Report Title:** {report_title}")
-    st.write(f"**Total Current Tuition:** {format_currency(st.session_state.calculated_values['total_current_tuition'])}")
-    st.write(f"**Total New Tuition:** {format_currency(st.session_state.calculated_values['total_new_tuition'])}")
-    st.write(f"**Final Tuition Increase Percentage:** {st.session_state.calculated_values['final_tuition_increase']:.2f}%")
-    st.write(f"**Tuition Assistance Ratio:** {st.session_state.calculated_values['tuition_assistance_ratio']:.2f}%")
-
+    
     # Interactive Table: Adjust Tuition by Grade Level
     st.subheader("Adjust Tuition by Grade Level")
     
@@ -277,20 +273,26 @@ if st.session_state.calculated_values is not None:
     df = pd.DataFrame(tuition_data)
     df["Adjusted New Tuition per Student"] = adjusted_tuition_values
     df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-    
-    # Calculate updated totals
-    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 
-    # Display the updated table and calculations
+    # Calculate updated totals and metrics
+    total_current_tuition = sum(df["Number of Students"] * df["Current Tuition per Student"])
+    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+    tuition_increase_percentage = ((adjusted_total_tuition - total_current_tuition) / total_current_tuition * 100) if total_current_tuition > 0 else 0.0
+    updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition * 100) if adjusted_total_tuition > 0 else 0.0
+
+    # Display real-time updated metrics
+    st.write("**Real-time Updates After Adjustments:**")
+    st.write(f"**Total Current Tuition:** {format_currency(total_current_tuition)}")
+    st.write(f"**Total New Tuition:** {format_currency(adjusted_total_tuition)}")
+    st.write(f"**Final Tuition Increase Percentage:** {tuition_increase_percentage:.2f}%")
+    st.write(f"**Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
+
+    # Display the updated table
+    st.write("**Detailed Breakdown by Grade Level:**")
     st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]].style.format({
         "Current Tuition per Student": lambda x: format_currency(x),
         "Adjusted New Tuition per Student": lambda x: format_currency(x),
         "Total Tuition for Grade": lambda x: format_currency(x)
     }))
-    
-    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Total Tuition:** {format_currency(st.session_state.calculated_values['total_new_tuition'] - adjusted_total_tuition)}")
-    st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
 
-    # Generate PDF with updated values
+    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")

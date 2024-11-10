@@ -173,4 +173,119 @@ for i in range(num_items):
 
 strategic_items_df = pd.DataFrame(strategic_items_list)
 
-### FINISHED FULL COPYABLE SYSTEM
+# Step 5: Previous Year's Total Expenses and Key Performance Indicators (KPIs)
+st.subheader("Step 5: Enter Previous Year's Total Expenses")
+previous_expenses_input = st.text_input("Previous Year's Total Expenses ($)", "")
+formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
+
+try:
+    previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", ""))
+except ValueError:
+    previous_expenses = 0.0
+
+if previous_expenses > 0:
+    # Calculate KPIs
+    total_tuition = sum(grades_data["num_students"]) * avg_tuition
+    tuition_to_expenses_ratio = (total_tuition / previous_expenses) * 100
+    total_compensation = sum(strategic_items["costs"])  # Simplified for now
+    compensation_to_expenses_ratio = (total_compensation / previous_expenses) * 100
+
+    # Display KPIs
+    st.write("**Key Performance Indicators (KPIs):**")
+    st.write(f"- Tuition-to-Expenses Ratio: {tuition_to_expenses_ratio:.2f}% (Target: 100%-102%)")
+    st.write(f"- Compensation-to-Expenses Ratio: {compensation_to_expenses_ratio:.2f}% (Target: 70%-80%)")
+
+    # Estimate Next Year's Expenses
+    total_strategic_items_cost = sum(strategic_items["costs"])
+    expense_increase_oti = previous_expenses * (roi_percentage / 100 + rpi_percentage / 100)
+    next_year_expenses = previous_expenses + expense_increase_oti + total_strategic_items_cost
+
+    st.write(f"**Projected Next Year's Expenses:** {format_currency(next_year_expenses)}")
+    st.write(
+        f"This projection includes:\n"
+        f"- Inflation (ROI): {roi_percentage:.2f}%\n"
+        f"- Productivity Increase (RPI): {rpi_percentage:.2f}%\n"
+        f"- Strategic Items Cost: {format_currency(total_strategic_items_cost)}"
+    )
+else:
+    st.error("Please enter a valid value for the previous year's total expenses.")
+
+# Adjustments to Step 6 to Reflect Strategic Integration
+final_tuition_increase = oti + si_percentage
+tuition_increase_summary = (
+    f"The tuition increase calculation includes:\n"
+    f"- Operations Tuition Increase (OTI): {oti:.2f}%\n"
+    f"- Strategic Items Contribution: {si_percentage:.2f}%\n"
+    f"Resulting in a total tuition increase of: {final_tuition_increase:.2f}%."
+)
+
+# Display the narrative
+st.subheader("Tuition Increase Narrative")
+st.write(tuition_increase_summary)
+
+# Update Results Section for New Metrics
+if st.session_state.calculated_values is not None:
+    st.subheader("Results with Adjusted Metrics")
+
+    # Update Calculated Values
+    st.session_state.calculated_values.update({
+        "tuition_to_expenses_ratio": tuition_to_expenses_ratio,
+        "compensation_to_expenses_ratio": compensation_to_expenses_ratio,
+        "next_year_expenses": next_year_expenses
+    })
+
+    # Display updated results
+    st.write(f"**Projected Next Year's Expenses:** {format_currency(next_year_expenses)}")
+    st.write(f"**Tuition-to-Expenses Ratio:** {tuition_to_expenses_ratio:.2f}%")
+    st.write(f"**Compensation-to-Expenses Ratio:** {compensation_to_expenses_ratio:.2f}%")
+    st.write(f"**Final Tuition Increase:** {final_tuition_increase:.2f}%")
+
+# Modify PDF Generation to Include KPIs and Projections
+def generate_pdf(report_title, df, total_current_tuition, adjusted_total_tuition, 
+                 tuition_increase_percentage, updated_tuition_assistance_ratio, 
+                 strategic_items_df, original_calculations, financial_aid, 
+                 next_year_expenses, tuition_to_expenses_ratio, compensation_to_expenses_ratio):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Title of the report
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(50, height - 50, f"Report Title: {report_title}")
+
+    # Include Key Metrics
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, height - 80, "Key Performance Indicators (KPIs):")
+    pdf.setFont("Helvetica", 11)
+    pdf.drawString(50, height - 100, f"Tuition-to-Expenses Ratio: {tuition_to_expenses_ratio:.2f}%")
+    pdf.drawString(50, height - 120, f"Compensation-to-Expenses Ratio: {compensation_to_expenses_ratio:.2f}%")
+    pdf.drawString(50, height - 140, f"Projected Next Year's Expenses: {format_currency(next_year_expenses)}")
+
+    # Rest of PDF content remains unchanged...
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
+
+# Button to Generate PDF
+if st.button("Download PDF Report"):
+    pdf_buffer = generate_pdf(
+        report_title,
+        df,
+        total_current_tuition,
+        adjusted_total_tuition,
+        tuition_increase_percentage,
+        updated_tuition_assistance_ratio,
+        strategic_items_df,
+        st.session_state.calculated_values,
+        financial_aid,
+        st.session_state.calculated_values["next_year_expenses"],
+        st.session_state.calculated_values["tuition_to_expenses_ratio"],
+        st.session_state.calculated_values["compensation_to_expenses_ratio"]
+    )
+    st.download_button(
+        label="Download PDF Report",
+        data=pdf_buffer,
+        file_name="tuition_report_with_KPIs.pdf",
+        mime="application/pdf"
+    )

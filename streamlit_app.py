@@ -138,7 +138,7 @@ while len(grades_data["grades"]) > num_grades:
 for i in range(num_grades):
     grades_data["grades"][i] = st.text_input(f"Grade Level {i+1} Name", grades_data["grades"][i])
     grades_data["num_students"][i] = st.number_input(
-        f"Number of Students in {grades_data['grades'][i]}",
+        f"Number of Students in {grades_data["grades"][i]}",
         min_value=0,
         step=1,
         value=grades_data["num_students"][i]
@@ -276,22 +276,16 @@ if st.session_state.calculated_values is not None:
     original_tuition_data = {
         "Grade": grades_data["grades"],
         "Number of Students": grades_data["num_students"],
-        "Original Tuition per Student": grades_data["current_tuition"],
+        "Original Tuition per Student": [
+            format_currency(val) for val in grades_data["current_tuition"]
+        ],
         "Adjusted Tuition per Student (Initial)": [
-            tuition * (1 + st.session_state.calculated_values['final_tuition_increase'] / 100) 
+            format_currency(tuition * (1 + st.session_state.calculated_values['final_tuition_increase'] / 100)) 
             for tuition in grades_data["current_tuition"]
         ]
     }
     original_comparison_df = pd.DataFrame(original_tuition_data)
-    original_comparison_df["Difference"] = original_comparison_df["Adjusted Tuition per Student (Initial)"] - original_comparison_df["Original Tuition per Student"]
-    original_comparison_html = original_comparison_df.to_html(
-        index=False,
-        classes="table table-bordered",
-        float_format="{:,.2f}".format,
-        border=0
-    )
-    st.write(f"<style>.table {{ width: 100%; margin: auto; }}</style>", unsafe_allow_html=True)
-    st.write(original_comparison_html, unsafe_allow_html=True)
+    st.table(original_comparison_df)
 
     # Interactive Table: Adjust Tuition by Grade Level
     st.subheader("Adjust Tuition by Grade Level")
@@ -300,7 +294,7 @@ if st.session_state.calculated_values is not None:
     tuition_data = {
         "Grade": grades_data["grades"],
         "Number of Students": grades_data["num_students"],
-        "Current Tuition per Student": grades_data["current_tuition"],
+        "Current Tuition per Student": [format_currency(val) for val in grades_data["current_tuition"]],
     }
     
     # Render the interactive number inputs dynamically
@@ -320,12 +314,22 @@ if st.session_state.calculated_values is not None:
     
     # Create complete DataFrame with all values
     df = pd.DataFrame(tuition_data)
-    df["Adjusted New Tuition per Student"] = adjusted_tuition_values
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+    df["Adjusted New Tuition per Student"] = [
+        format_currency(val) for val in adjusted_tuition_values
+    ]
+    df["Total Tuition for Grade"] = [
+        format_currency(students * adj_tuition) for students, adj_tuition in zip(
+            grades_data["num_students"], adjusted_tuition_values
+        )
+    ]
 
     # Calculate updated totals and metrics
-    total_current_tuition = sum(df["Number of Students"] * df["Current Tuition per Student"])
-    adjusted_total_tuition = sum(df["Total Tuition for Grade"])
+    total_current_tuition = sum(df["Number of Students"] * grades_data["current_tuition"])
+    adjusted_total_tuition = sum([
+        students * adj_tuition for students, adj_tuition in zip(
+            grades_data["num_students"], adjusted_tuition_values
+        )
+    ])
     tuition_increase_percentage = ((adjusted_total_tuition - total_current_tuition) / total_current_tuition) * 100 if total_current_tuition > 0 else 0.0
     updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 
@@ -341,19 +345,14 @@ if st.session_state.calculated_values is not None:
     adjustment_comparison_data = {
         "Grade": df["Grade"],
         "Number of Students": df["Number of Students"],
-        "Original Tuition per Student": df["Current Tuition per Student"],
-        "Adjusted Tuition per Student (Final)": df["Adjusted New Tuition per Student"],
-        "Difference": df["Adjusted New Tuition per Student"] - df["Current Tuition per Student"],
+        "Original Tuition per Student": [format_currency(val) for val in grades_data["current_tuition"]],
+        "Adjusted Tuition per Student (Final)": [format_currency(val) for val in adjusted_tuition_values],
+        "Difference": [
+            format_currency(adj - orig) for adj, orig in zip(adjusted_tuition_values, grades_data["current_tuition"])
+        ]
     }
     adjustment_comparison_df = pd.DataFrame(adjustment_comparison_data)
-    adjustment_comparison_html = adjustment_comparison_df.to_html(
-        index=False,
-        classes="table table-bordered",
-        float_format="{:,.2f}".format,
-        border=0
-    )
-    st.write(f"<style>.table {{ width: 100%; margin: auto; }}</style>", unsafe_allow_html=True)
-    st.write(adjustment_comparison_html, unsafe_allow_html=True)
+    st.table(adjustment_comparison_df)
 
     # Button to generate PDF
     if st.button("Download PDF Report"):

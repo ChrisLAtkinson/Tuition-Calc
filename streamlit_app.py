@@ -94,7 +94,7 @@ if "calculated_values" not in st.session_state:
     st.session_state.calculated_values = None
 
 if "adjusted_tuition" not in st.session_state:
-    st.session_state.adjusted_tuition = None
+    st.session_state.adjusted_tuition = []
 
 if "grades_data" not in st.session_state:
     st.session_state.grades_data = {"grades": [], "num_students": [], "current_tuition": []}
@@ -152,6 +152,13 @@ for i in range(num_grades):
         grades_data["current_tuition"][i] = float(formatted_tuition.replace(",", "").replace("$", ""))
     except ValueError:
         grades_data["current_tuition"][i] = 0.0
+
+# Ensure adjusted tuition matches the number of grades
+while len(st.session_state.adjusted_tuition) < len(grades_data["grades"]):
+    st.session_state.adjusted_tuition.append(0.0)
+
+while len(st.session_state.adjusted_tuition) > len(grades_data["grades"]):
+    st.session_state.adjusted_tuition.pop()
 
 # Step 3: Automatically Calculate Average Tuition
 st.subheader("Step 3: Automatically Calculate Average Tuition")
@@ -247,7 +254,7 @@ if st.button("Calculate New Tuition"):
     }
 
     # Initialize adjusted tuition if not already set
-    if st.session_state.adjusted_tuition is None:
+    if len(st.session_state.adjusted_tuition) != len(grades_data["current_tuition"]):
         st.session_state.adjusted_tuition = [
             tuition * (1 + final_tuition_increase / 100) for tuition in grades_data["current_tuition"]
         ]

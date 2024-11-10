@@ -84,7 +84,6 @@ def generate_pdf(report_title, df, total_current_tuition, total_new_tuition, avg
     buffer.seek(0)
     return buffer
 
-
 # Streamlit App Start
 st.title("Tuition Calculation Tool")
 
@@ -223,65 +222,82 @@ if st.button("Calculate New Tuition"):
 
     # Initialize adjusted tuition state if not already present
     if "adjusted_tuition" not in st.session_state:
-        st.session_state.adjusted_tuition = [
-            tuition * (1 + final_tuition_increase / 100) for tuition in grades_data["current_tuition"]
-        ]
+        st.session_state.adjusted_tuition = [tuition * (1 + final_tuition_increase / 100) for tuition in grades_data["current_tuition"]]
 
-    # Interactive Table: Adjust Tuition by Grade Level
+    # Adjust Tuition by Grade Level
     st.subheader("Adjust Tuition by Grade Level")
-    tuition_data = {
-        "Grade": grades_data["grades"],
-        "Number of Students": grades_data["num_students"],
-        "Current Tuition per Student": grades_data["current_tuition"],
-        "Adjusted New Tuition per Student": st.session_state.adjusted_tuition,
-    }
-    df = pd.DataFrame(tuition_data)
 
-    # Render the interactive number inputs dynamically
-    for i in range(len(grades_data["grades"])):
-        st.session_state.adjusted_tuition[i] = st.number_input(
-            f"Adjusted Tuition for {grades_data['grades'][i]}",
-            value=st.session_state.adjusted_tuition[i],
-            min_value=0.0,
-            step=0.01,
-            key=f"adjusted_tuition_{i}",
+    # Use a container to hold this section persistently
+    adjust_container = st.container()
+    with adjust_container:
+        # Create an editable table
+        edited_df = st.data_editor(
+            data=pd.DataFrame({
+                "Grade": grades_data["grades"],
+                "Number of Students": grades_data["num_students"],
+                "Current Tuition per Student": [format_currency(tuition) for tuition in grades_data["current_tuition"]],
+                "Adjusted New Tuition per Student": [format_currency(tuition) for tuition in st.session_state.adjusted_tuition],
+            }),
+            column_config={
+                "Adjusted New Tuition per Student": st.column_config.NumberColumn(
+                    "Adjusted New Tuition per Student",
+                    format="$%d",
+                    min_value=0,
+                    step=0.01
+                )
+            },
+            disabled=["Grade", "Number of Students", "Current Tuition per Student"],
+            key="tuition_table"
         )
 
-    # Update DataFrame with adjusted tuition values
-    df["Adjusted New Tuition per Student"] = st.session_state.adjusted_tuition
-    df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
-    adjusted_total_tuition = df["Total Tuition for Grade"].sum()
-    updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
+        # Update session state with edited values
+        if edited_df is not None:
+            for i, row in edited_df.iterrows():
+                if row["Adjusted New Tuition per Student"] != format_currency(st.session_state.adjusted_tuition[i]):
+                    # Convert formatted currency back to float
+                    new_value = float(row["Adjusted New Tuition per Student"].replace("$", "").replace(",", ""))
+                    st.session_state.adjusted_tuition[i] = new_value
 
-    # Display the updated table and calculations
-    st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
-    st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
-    st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
-    st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
+        # Recalculate totals based on adjusted tuition
+        df = pd.DataFrame({
+            "Grade": grades_data["grades"],
+            "Number of Students": grades_data["num_students"],
+            "Current Tuition per Student": grades_data["current_tuition"],
+            "Adjusted New Tuition per Student": st.session_state.adjusted_tuition,
+        })
+        df["Total Tuition for Grade"] = df["Number of Students"] * df["Adjusted New Tuition per Student"]
+        adjusted_total_tuition = df["Total Tuition for Grade"].sum()
+        updated_tuition_assistance_ratio = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 
-    # Generate PDF with updated values
-    strategic_items_df = pd.DataFrame(
-        {
-            "Strategic Item": strategic_items["names"],
-            "Cost ($)": strategic_items["costs"],
-            "Description": strategic_items["descriptions"],
-        }
-    )
+        # Display updated information
+        st.write(df[["Grade", "Number of Students", "Current Tuition per Student", "Adjusted New Tuition per Student", "Total Tuition for Grade"]])
+        st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
+        st.write(f"**Difference from Target Total Tuition:** {format_currency(total_new_tuition - adjusted_total_tuition)}")
+        st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
 
-    pdf_buffer = generate_pdf(
-        report_title,
-        df,
-        total_current_tuition,
-        adjusted_total_tuition,
-        final_tuition_increase,
-        updated_tuition_assistance_ratio,
-        strategic_items_df,
-        "Updated summary of tuition adjustment calculations based on user inputs.",
-    )
+        # Generate PDF with updated values
+        strategic_items_df = pd.DataFrame(
+            {
+                "Strategic Item": strategic_items["names"],
+                "Cost ($)": strategic_items["costs"],
+                "Description": strategic_items["descriptions"],
+            }
+        )
 
-    st.download_button(
-        label="Download Updated Report as PDF",
-        data=pdf_buffer,
-        file_name="adjusted_tuition_report.pdf",
-        mime="application/pdf",
-    )
+        pdf_buffer = generate_pdf(
+            report_title,
+            df,
+            total_current_tuition,
+            adjusted_total_tuition,
+            final_tuition_increase,
+            updated_tuition_assistance_ratio,
+            strategic_items_df,
+            "Updated summary of tuition adjustment calculations based on user inputs.",
+        )
+
+        st.download_button(
+            label="Download Updated Report as PDF",
+            data=pdf_buffer,
+            file_name="adjusted_tuition_report.pdf",
+            mime="application/pdf",
+        )

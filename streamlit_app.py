@@ -291,4 +291,6 @@ if st.session_state.calculated_values is not None:
     
     st.write(f"**Adjusted Total Tuition:** {format_currency(adjusted_total_tuition)}")
     st.write(f"**Difference from Target Total Tuition:** {format_currency(st.session_state.calculated_values['total_new_tuition'] - adjusted_total_tuition)}")
-    st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio
+    st.write(f"**Updated Tuition Assistance Ratio:** {updated_tuition_assistance_ratio:.2f}%")
+
+    # Generate PDF with updated values

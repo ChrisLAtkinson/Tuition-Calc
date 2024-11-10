@@ -271,7 +271,7 @@ if st.session_state.calculated_values is not None:
     st.write(f"**Final Tuition Increase Percentage:** {st.session_state.calculated_values['final_tuition_increase']:.2f}%")
     st.write(f"**Tuition Assistance Ratio:** {st.session_state.calculated_values['tuition_assistance_ratio']:.2f}%")
     
-    # Original vs Adjusted Tuition Comparison Table
+    # Original vs Adjusted Tuition Table (Initial Results)
     st.subheader("Original vs Adjusted Tuition by Grade Level (Initial Results)")
     original_tuition_data = {
         "Grade": grades_data["grades"],
@@ -284,7 +284,14 @@ if st.session_state.calculated_values is not None:
     }
     original_comparison_df = pd.DataFrame(original_tuition_data)
     original_comparison_df["Difference"] = original_comparison_df["Adjusted Tuition per Student (Initial)"] - original_comparison_df["Original Tuition per Student"]
-    st.dataframe(original_comparison_df)
+    original_comparison_html = original_comparison_df.to_html(
+        index=False,
+        classes="table table-bordered",
+        float_format="{:,.2f}".format,
+        border=0
+    )
+    st.write(f"<style>.table {{ width: 100%; margin: auto; }}</style>", unsafe_allow_html=True)
+    st.write(original_comparison_html, unsafe_allow_html=True)
 
     # Interactive Table: Adjust Tuition by Grade Level
     st.subheader("Adjust Tuition by Grade Level")
@@ -339,7 +346,14 @@ if st.session_state.calculated_values is not None:
         "Difference": df["Adjusted New Tuition per Student"] - df["Current Tuition per Student"],
     }
     adjustment_comparison_df = pd.DataFrame(adjustment_comparison_data)
-    st.dataframe(adjustment_comparison_df)
+    adjustment_comparison_html = adjustment_comparison_df.to_html(
+        index=False,
+        classes="table table-bordered",
+        float_format="{:,.2f}".format,
+        border=0
+    )
+    st.write(f"<style>.table {{ width: 100%; margin: auto; }}</style>", unsafe_allow_html=True)
+    st.write(adjustment_comparison_html, unsafe_allow_html=True)
 
     # Button to generate PDF
     if st.button("Download PDF Report"):
@@ -361,4 +375,3 @@ if st.session_state.calculated_values is not None:
             file_name="tuition_report.pdf",
             mime="application/pdf"
         )
-

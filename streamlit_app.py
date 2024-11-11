@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 import locale
-from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 
 # Configure locale for currency formatting
 locale.setlocale(locale.LC_ALL, '')
@@ -18,47 +15,13 @@ def format_currency(value):
 def format_input_as_currency(input_value):
     """Format input strings as currency."""
     try:
-        if not input_value or input_value.strip() == "":
+        if not input_value:
             return ""
         input_value = input_value.replace(",", "").replace("$", "")
         value = float(input_value)
         return f"${value:,.2f}"
     except ValueError:
-        return "$0.00"  # Default to "$0.00" if the input cannot be parsed
-
-def generate_pdf(report_title, grades_df, financial_aid, projected_total_tuition, adjusted_total_tuition):
-    """Generate a downloadable PDF report."""
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    # Title
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(50, height - 50, report_title)
-
-    # Tuition Summary
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, height - 100, "Tuition Summary:")
-    pdf.setFont("Helvetica", 11)
-    pdf.drawString(50, height - 120, f"Projected Total Tuition: {format_currency(projected_total_tuition)}")
-    pdf.drawString(50, height - 140, f"Adjusted Total Tuition: {format_currency(adjusted_total_tuition)}")
-    pdf.drawString(50, height - 160, f"Total Financial Aid: {format_currency(financial_aid)}")
-
-    # Grade-Level Breakdown
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(50, height - 200, "Grade-Level Tuition Breakdown:")
-    row_y = height - 220
-    pdf.setFont("Helvetica", 10)
-    for i, row in grades_df.iterrows():
-        pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students")
-        pdf.drawString(250, row_y, f"Projected Tuition: {format_currency(row['Projected Tuition per Student'])}")
-        pdf.drawString(450, row_y, f"Adjusted Tuition: {format_currency(row['Adjusted Tuition per Student'])}")
-        row_y -= 20
-
-    # Finalize PDF
-    pdf.save()
-    buffer.seek(0)
-    return buffer
+        return ""
 
 # Streamlit App Start
 st.title("Tuition and Expense Planning Tool")
@@ -67,11 +30,10 @@ st.title("Tuition and Expense Planning Tool")
 st.subheader("Step 1: Previous Year's Total Expenses")
 previous_expenses_input = st.text_input("Enter the Previous Year's Total Expenses ($)", "")
 formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
-
 try:
     previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", ""))
 except ValueError:
-    previous_expenses = 0.0  # Fallback value
+    previous_expenses = 0.0
 
 if previous_expenses > 0:
     st.success(f"Previous Year's Total Expenses: {format_currency(previous_expenses)}")
@@ -109,8 +71,6 @@ st.info(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
 if strategic_items:
     st.subheader("Strategic Items Overview")
     strategic_items_df = pd.DataFrame(strategic_items)
-    # Format costs in the table
-    strategic_items_df["Cost"] = strategic_items_df["Cost"].apply(format_currency)
     st.table(strategic_items_df)
 
 # Step 4: Total Expense Growth and Budget Projection
@@ -158,39 +118,49 @@ current_total_tuition = grades_df["Total Current Tuition"].sum()
 
 # Display initial results
 if st.button("View Results"):
-    st.subheader("Projected Results")
+    st.subheader("Initial Projected Tuition Increase")
+    st.table(grades_df)
+
+    # Real-time metrics after results
     projected_total_tuition = grades_df["Total Projected Tuition"].sum()
+    tuition_assistance_ratio_projected = (financial_aid / projected_total_tuition) * 100 if projected_total_tuition > 0 else 0.0
+    income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+    tuition_rate_increase_projected = ((projected_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
+
     st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
     st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
-    st.write(f"**Total Financial Aid:** {format_currency(financial_aid)}")
-    st.write(f"**Income to Expense Ratio:** {(projected_total_tuition / new_expense_budget) * 100:.2f}%")
+    st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
+    st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
+    st.write(f"**Tuition Rate Increase (Projected):** {tuition_rate_increase_projected:.2f}%")
 
-# Adjust Tuition
-st.subheader("Adjusted Tuition Per Grade Level")
+# Allow user to adjust tuition per grade level
+st.subheader("Adjust Tuition by Grade Level")
 adjusted_tuitions = []
 for i, grade in grades_df.iterrows():
     adjusted_tuition = st.number_input(
-        f"Adjusted Tuition for {grade['Grade']}", min_value=0.0, step=0.01, value=grade["Projected Tuition per Student"]
+        f"Adjusted Tuition for {grade['Grade']} ($)",
+        min_value=0.0,
+        step=0.01,
+        value=grade["Projected Tuition per Student"],
     )
     adjusted_tuitions.append(adjusted_tuition)
+
 grades_df["Adjusted Tuition per Student"] = adjusted_tuitions
-grades_df["Total Adjusted Tuition"] = grades_df["Adjusted Tuition per Student"] * grades_df["Number of Students"]
+grades_df["Total Adjusted Tuition"] = grades_df["Number of Students"] * grades_df["Adjusted Tuition per Student"]
 
+# Real-time metrics for adjusted tuition
 adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
-st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
+tuition_assistance_ratio_adjusted = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
+income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+tuition_rate_increase_adjusted = ((adjusted_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
 
-# Print PDF
-if st.button("Print PDF"):
-    pdf_buffer = generate_pdf(
-        "Tuition and Expense Report",
-        grades_df,
-        financial_aid,
-        projected_total_tuition,
-        adjusted_total_tuition
-    )
-    st.download_button(
-        label="Download PDF",
-        data=pdf_buffer,
-        file_name="tuition_report.pdf",
-        mime="application/pdf"
-    )
+st.subheader("Real-Time Metrics and Comparison")
+st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
+st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
+st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
+st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
+
+if income_to_expense_ratio_adjusted < 100:
+    st.warning("Adjusted tuition does not fully cover projected expenses.")
+elif income_to_expense_ratio_adjusted >= 100:
+    st.success("Adjusted tuition meets or exceeds projected expenses.")

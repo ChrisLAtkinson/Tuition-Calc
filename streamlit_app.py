@@ -74,8 +74,22 @@ new_expense_budget = previous_expenses * (1 + total_increase_percentage / 100)
 st.write(f"Total Increase in Expenses: {total_increase_percentage:.2f}%")
 st.write(f"Projected New Expense Budget: {format_currency(new_expense_budget)}")
 
-# Step 5: Tuition Adjustment by Grade Level
-st.subheader("Step 5: Tuition Adjustment by Grade Level")
+# Step 5: Tuition Assistance
+st.subheader("Step 5: Tuition Assistance")
+financial_aid_input = st.text_input("Total Financial Aid Provided ($)", "")
+formatted_financial_aid = format_input_as_currency(financial_aid_input)
+try:
+    financial_aid = float(formatted_financial_aid.replace(",", "").replace("$", ""))
+except ValueError:
+    financial_aid = 0.0
+
+if financial_aid > 0:
+    st.success(f"Total Financial Aid: {format_currency(financial_aid)}")
+else:
+    st.warning("Please enter valid financial aid amount.")
+
+# Step 6: Tuition Adjustment by Grade Level
+st.subheader("Step 6: Tuition Adjustment by Grade Level")
 
 # Grade-level data input
 num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, step=1, value=1)
@@ -118,9 +132,15 @@ current_total_tuition = grades_df["Total Current Tuition"].sum()
 projected_total_tuition = grades_df["Total Projected Tuition"].sum()
 adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
 
+tuition_assistance_ratio_projected = (financial_aid / projected_total_tuition) * 100 if projected_total_tuition > 0 else 0.0
+tuition_assistance_ratio_adjusted = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
+
 st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
 st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
 st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
+
+st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
+st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
 
 income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
 income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0

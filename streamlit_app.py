@@ -130,51 +130,40 @@ if st.button("View Results"):
     # Projected Results with Explanations
     st.subheader("Projected Results")
     st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
-    st.write("This represents the total tuition revenue currently collected across all grades. It’s calculated by multiplying the number of students by the current tuition rates for each grade.")
+    st.write("This represents the total tuition revenue currently collected across all grades.")
 
     st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
-    st.write("This reflects the estimated revenue after applying the calculated percentage increase (from inflation, productivity, and strategic items) to the current tuition rates.")
+    st.write("This reflects the estimated revenue after applying the calculated percentage increase to the current tuition rates.")
 
     st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
-    st.write("This measures how much of the tuition revenue will be allocated to financial aid. It helps ensure financial aid remains proportional to the new revenue levels.")
+    st.write("This measures how much of the tuition revenue will be allocated to financial aid.")
 
     st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
-    st.write("This measures whether projected tuition revenue is enough to cover the school’s expenses. A ratio above 100% means revenue exceeds expenses, while below 100% means a shortfall.")
+    st.write("This measures whether projected tuition revenue is enough to cover the school’s expenses.")
 
     st.write(f"**Tuition Rate Increase (Projected):** {tuition_rate_increase_projected:.2f}%")
     st.write("This represents the percentage growth in revenue due to the projected tuition changes compared to current tuition levels.")
 
-# Allow user to adjust tuition per grade level
-st.subheader("Adjust Tuition by Grade Level")
-adjusted_tuitions = []
-for i, grade in grades_df.iterrows():
-    adjusted_tuition = st.number_input(
-        f"Adjusted Tuition for {grade['Grade']} ($)",
-        min_value=0.0,
-        step=0.01,
-        value=grade["Projected Tuition per Student"],
-    )
-    adjusted_tuitions.append(adjusted_tuition)
+# Description of Tuition Increases
+st.subheader("Explanation of Tuition Increases")
+st.write(
+    """
+    Tuition increases in the article are determined using a structured formula that incorporates the following components:
 
-grades_df["Adjusted Tuition per Student"] = adjusted_tuitions
-grades_df["Total Adjusted Tuition"] = grades_df["Number of Students"] * grades_df["Adjusted Tuition per Student"]
+    **Operations Tuition Increase (OTI):**
+    - Tuition increases are calculated based on external economic factors:
+        - **Inflation Rate (ROI):** The rate of inflation from the Consumer Price Index (CPI), ensuring the school’s operations budget retains its purchasing power.
+        - **Rate of Productivity Increase (RPI):** A five-year rolling average to reflect improvements in efficiency or productivity.
 
-# Real-time metrics for adjusted tuition
-adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
-tuition_assistance_ratio_adjusted = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
-income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
-tuition_rate_increase_adjusted = ((adjusted_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
+    **Strategic Items (SI):**
+    - Costs related to planned improvements, new programs, additional staff, or infrastructure investments.
+    - These are discretionary and determined by the school’s leadership based on strategic goals.
 
-# Adjusted Results with Explanations
-st.subheader("Adjusted Results")
-st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
-st.write("This is the revenue collected based on user-defined adjustments to tuition rates for each grade.")
+    **Actual Tuition Increase:**
+    - This is the sum of the Operations Tuition Increase and the percentage increase required to fund Strategic Items.
+    - For example:
+        Actual Tuition Increase = OTI + SI Percentage
 
-st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
-st.write("This measures how much of the adjusted tuition revenue is allocated to financial aid.")
-
-st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
-st.write("This shows whether adjusted tuition revenue is sufficient to cover the school’s expenses after adjustments.")
-
-st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
-st.write("This shows the percentage increase in tuition revenue based on the user’s adjustments.")
+    This formula ensures that tuition increases maintain the school’s financial health, support its mission, and improve operational excellence while considering both current and long-term needs.
+    """
+)

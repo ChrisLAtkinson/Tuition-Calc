@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import locale
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 # Configure locale for currency formatting
 locale.setlocale(locale.LC_ALL, '')
@@ -12,16 +15,39 @@ def format_currency(value):
     except:
         return f"${value:,.2f}"
 
-def format_input_as_currency(input_value):
-    """Format input strings as currency."""
-    try:
-        if not input_value:
-            return ""
-        input_value = input_value.replace(",", "").replace("$", "")
-        value = float(input_value)
-        return f"${value:,.2f}"
-    except ValueError:
-        return ""
+def generate_pdf(report_title, grades_df, financial_aid, projected_total_tuition, adjusted_total_tuition):
+    """Generate a downloadable PDF report."""
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Title
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(50, height - 50, report_title)
+
+    # Tuition Summary
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, height - 100, "Tuition Summary:")
+    pdf.setFont("Helvetica", 11)
+    pdf.drawString(50, height - 120, f"Projected Total Tuition: {format_currency(projected_total_tuition)}")
+    pdf.drawString(50, height - 140, f"Adjusted Total Tuition: {format_currency(adjusted_total_tuition)}")
+    pdf.drawString(50, height - 160, f"Total Financial Aid: {format_currency(financial_aid)}")
+
+    # Grade-Level Breakdown
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, height - 200, "Grade-Level Tuition Breakdown:")
+    row_y = height - 220
+    pdf.setFont("Helvetica", 10)
+    for i, row in grades_df.iterrows():
+        pdf.drawString(50, row_y, f"{row['Grade']}: {row['Number of Students']} students")
+        pdf.drawString(250, row_y, f"Projected Tuition: {format_currency(row['Projected Tuition per Student'])}")
+        pdf.drawString(450, row_y, f"Adjusted Tuition: {format_currency(row['Adjusted Tuition per Student'])}")
+        row_y -= 20
+
+    # Finalize PDF
+    pdf.save()
+    buffer.seek(0)
+    return buffer
 
 # Streamlit App Start
 st.title("Tuition and Expense Planning Tool")
@@ -141,18 +167,18 @@ grades_df["Total Adjusted Tuition"] = grades_df["Adjusted Tuition per Student"] 
 adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
 st.write(f"**Total Adjusted Tuition:** {format_currency(adjusted_total_tuition)}")
 
-# Explanation Section
-st.subheader("Explanation of Tuition Increases")
-st.write(
-    """
-    Tuition increases in the article are determined using a structured formula that incorporates the following components:
-
-    **Operations Tuition Increase (OTI):**
-    - Based on external economic factors:
-      - **Inflation Rate (ROI):** Ensures the school’s budget maintains its purchasing power.
-      - **Rate of Productivity Increase (RPI):** Reflects efficiency improvements.
-    
-    **Strategic Items (SI):**
-    - Covers planned improvements like new programs or infrastructure.
-    """
-)
+# Print PDF
+if st.button("Print PDF"):
+    pdf_buffer = generate_pdf(
+        "Tuition and Expense Report",
+        grades_df,
+        financial_aid,
+        projected_total_tuition,
+        adjusted_total_tuition
+    )
+    st.download_button(
+        label="Download PDF",
+        data=pdf_buffer,
+        file_name="tuition_report.pdf",
+        mime="application/pdf"
+    )

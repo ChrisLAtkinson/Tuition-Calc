@@ -116,13 +116,14 @@ if st.button("View Results"):
     projected_total_tuition = grades_df["Total Projected Tuition"].sum()
 
     tuition_assistance_ratio_projected = (financial_aid / projected_total_tuition) * 100 if projected_total_tuition > 0 else 0.0
-
     income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+    tuition_rate_increase_projected = ((projected_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
 
     st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
     st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
     st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
     st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
+    st.write(f"**Tuition Rate Increase (Projected):** {tuition_rate_increase_projected:.2f}%")
 
 # Allow user to adjust tuition per grade level
 st.subheader("Adjust Tuition by Grade Level")
@@ -141,14 +142,15 @@ grades_df["Total Adjusted Tuition"] = grades_df["Number of Students"] * grades_d
 
 # Real-time metrics for adjusted tuition
 adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
-
 tuition_assistance_ratio_adjusted = (financial_aid / adjusted_total_tuition) * 100 if adjusted_total_tuition > 0 else 0.0
 income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+tuition_rate_increase_adjusted = ((adjusted_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
 
 st.subheader("Real-Time Metrics and Comparison")
 st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
 st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
 st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
+st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
 
 if income_to_expense_ratio_adjusted < 100:
     st.warning("Adjusted tuition does not fully cover projected expenses.")

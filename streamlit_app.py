@@ -15,6 +15,17 @@ def format_currency(value):
     except:
         return f"${value:,.2f}"
 
+def format_input_as_currency(input_value):
+    """Format input strings as currency."""
+    try:
+        if not input_value or input_value.strip() == "":
+            return ""
+        input_value = input_value.replace(",", "").replace("$", "")
+        value = float(input_value)
+        return f"${value:,.2f}"
+    except ValueError:
+        return "$0.00"  # Default to "$0.00" if the input cannot be parsed
+
 def generate_pdf(report_title, grades_df, financial_aid, projected_total_tuition, adjusted_total_tuition):
     """Generate a downloadable PDF report."""
     buffer = BytesIO()
@@ -56,10 +67,11 @@ st.title("Tuition and Expense Planning Tool")
 st.subheader("Step 1: Previous Year's Total Expenses")
 previous_expenses_input = st.text_input("Enter the Previous Year's Total Expenses ($)", "")
 formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
+
 try:
     previous_expenses = float(formatted_previous_expenses.replace(",", "").replace("$", ""))
 except ValueError:
-    previous_expenses = 0.0
+    previous_expenses = 0.0  # Fallback value
 
 if previous_expenses > 0:
     st.success(f"Previous Year's Total Expenses: {format_currency(previous_expenses)}")

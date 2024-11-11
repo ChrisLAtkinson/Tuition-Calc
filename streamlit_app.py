@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 import locale
-from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 
 # Configure locale for currency formatting
 locale.setlocale(locale.LC_ALL, '')
@@ -96,8 +93,9 @@ grades_df["Total Current Tuition"] = grades_df["Number of Students"] * grades_df
 grades_df["Total Projected Tuition"] = grades_df["Number of Students"] * grades_df["Projected Tuition per Student"]
 
 # Display initial results
-st.subheader("Initial Projected Tuition Increase")
-st.table(grades_df)
+if st.button("View Results"):
+    st.subheader("Initial Projected Tuition Increase")
+    st.table(grades_df)
 
 # Allow user to adjust tuition per grade level
 st.subheader("Adjust Tuition by Grade Level")
@@ -114,26 +112,26 @@ for i, grade in grades_df.iterrows():
 grades_df["Adjusted Tuition per Student"] = adjusted_tuitions
 grades_df["Total Adjusted Tuition"] = grades_df["Number of Students"] * grades_df["Adjusted Tuition per Student"]
 
-# Comparison of original and adjusted results
-st.subheader("Comparison of Original and Adjusted Tuition")
-comparison_df = grades_df[["Grade", "Number of Students", "Current Tuition", "Projected Tuition per Student", "Adjusted Tuition per Student", "Total Current Tuition", "Total Projected Tuition", "Total Adjusted Tuition"]]
-st.table(comparison_df)
-
-# Step 6: Financial Metrics and KPIs
-st.subheader("Step 6: Financial Metrics and Key Performance Indicators")
+# Real-time metrics for comparison
+st.subheader("Real-Time Metrics and Comparison")
 current_total_tuition = grades_df["Total Current Tuition"].sum()
 projected_total_tuition = grades_df["Total Projected Tuition"].sum()
 adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
 
-st.write(f"Current Total Tuition: {format_currency(current_total_tuition)}")
-st.write(f"Projected Total Tuition (Based on Initial Increase): {format_currency(projected_total_tuition)}")
-st.write(f"Adjusted Total Tuition (User Adjusted): {format_currency(adjusted_total_tuition)}")
+st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
+st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
+st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
 
-income_to_expense_ratio = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
-st.write(f"Income to Expense (I/E) Ratio: {income_to_expense_ratio:.2f}%")
-st.write(f"Target KPI (I/E Ratio): {100:.2f}%")
-if income_to_expense_ratio < 100:
+income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+
+st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
+st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
+
+if income_to_expense_ratio_adjusted < 100:
     st.warning("Adjusted tuition does not fully cover projected expenses.")
+elif income_to_expense_ratio_adjusted >= 100:
+    st.success("Adjusted tuition meets or exceeds projected expenses.")
 
 # Downloadable Report
 if st.button("Generate PDF Report"):

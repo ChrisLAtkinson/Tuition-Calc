@@ -127,11 +127,28 @@ if st.button("View Results"):
     income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
     tuition_rate_increase_projected = ((projected_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
 
+    # Projected Results with Explanations
+    st.subheader("Projected Results")
     st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
+    st.write("This is the total tuition revenue calculated based on the current tuition rates for all grades and the number of students in each grade.")
+
     st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
+    st.write("This is the total tuition revenue after applying the automatically calculated Total Increase Percentage to the current tuition rates.")
+
     st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
+    st.latex(r"""
+    \text{Tuition Assistance Ratio (\%)} = \left( \frac{\text{Total Financial Aid}}{\text{Projected Total Tuition}} \right) \times 100
+    """)
+
     st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
+    st.latex(r"""
+    \text{Income to Expense Ratio (\%)} = \left( \frac{\text{Projected Total Tuition}}{\text{New Expense Budget}} \right) \times 100
+    """)
+
     st.write(f"**Tuition Rate Increase (Projected):** {tuition_rate_increase_projected:.2f}%")
+    st.latex(r"""
+    \text{Tuition Rate Increase (\%)} = \left( \frac{\text{Projected Total Tuition} - \text{Current Total Tuition}}{\text{Current Total Tuition}} \right) \times 100
+    """)
 
 # Allow user to adjust tuition per grade level
 st.subheader("Adjust Tuition by Grade Level")
@@ -154,13 +171,22 @@ tuition_assistance_ratio_adjusted = (financial_aid / adjusted_total_tuition) * 1
 income_to_expense_ratio_adjusted = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
 tuition_rate_increase_adjusted = ((adjusted_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0
 
-st.subheader("Real-Time Metrics and Comparison")
+# Adjusted Results with Explanations
+st.subheader("Adjusted Results")
 st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
-st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
-st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
-st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
+st.write("This is the total tuition revenue based on the user-adjusted tuition rates for all grades.")
 
-if income_to_expense_ratio_adjusted < 100:
-    st.warning("Adjusted tuition does not fully cover projected expenses.")
-elif income_to_expense_ratio_adjusted >= 100:
-    st.success("Adjusted tuition meets or exceeds projected expenses.")
+st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
+st.latex(r"""
+\text{Tuition Assistance Ratio (\%)} = \left( \frac{\text{Total Financial Aid}}{\text{Adjusted Total Tuition}} \right) \times 100
+""")
+
+st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
+st.latex(r"""
+\text{Income to Expense Ratio (\%)} = \left( \frac{\text{Adjusted Total Tuition}}{\text{New Expense Budget}} \right) \times 100
+""")
+
+st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
+st.latex(r"""
+\text{Tuition Rate Increase (\%)} = \left( \frac{\text{Adjusted Total Tuition} - \text{Current Total Tuition}}{\text{Current Total Tuition}} \right) \times 100
+""")

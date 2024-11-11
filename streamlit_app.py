@@ -106,15 +106,16 @@ grades_df["Projected Tuition per Student"] = grades_df["Current Tuition"] * (1 +
 grades_df["Total Current Tuition"] = grades_df["Number of Students"] * grades_df["Current Tuition"]
 grades_df["Total Projected Tuition"] = grades_df["Number of Students"] * grades_df["Projected Tuition per Student"]
 
+# Initialize current_total_tuition before further use
+current_total_tuition = grades_df["Total Current Tuition"].sum()
+
 # Display initial results
 if st.button("View Results"):
     st.subheader("Initial Projected Tuition Increase")
     st.table(grades_df)
 
     # Real-time metrics after results
-    current_total_tuition = grades_df["Total Current Tuition"].sum()
     projected_total_tuition = grades_df["Total Projected Tuition"].sum()
-
     tuition_assistance_ratio_projected = (financial_aid / projected_total_tuition) * 100 if projected_total_tuition > 0 else 0.0
     income_to_expense_ratio_projected = (projected_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
     tuition_rate_increase_projected = ((projected_total_tuition - current_total_tuition) / current_total_tuition) * 100 if current_total_tuition > 0 else 0.0

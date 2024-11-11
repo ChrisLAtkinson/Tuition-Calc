@@ -77,27 +77,63 @@ new_expense_budget = previous_expenses * (1 + total_increase_percentage / 100)
 st.write(f"Total Increase in Expenses: {total_increase_percentage:.2f}%")
 st.write(f"Projected New Expense Budget: {format_currency(new_expense_budget)}")
 
-# Step 5: Tuition Adjustment
-st.subheader("Step 5: Tuition Adjustment")
-number_of_students = st.number_input("Total Number of Students", min_value=1, step=1, value=1)
-current_avg_tuition = st.number_input("Current Average Tuition per Student ($)", min_value=0.0, step=0.01, value=0.0)
+# Step 5: Tuition Adjustment by Grade Level
+st.subheader("Step 5: Tuition Adjustment by Grade Level")
 
-current_total_tuition = number_of_students * current_avg_tuition
-new_avg_tuition = current_avg_tuition * (1 + total_increase_percentage / 100)
-new_total_tuition = number_of_students * new_avg_tuition
+# Grade-level data input
+num_grades = st.number_input("Number of Grade Levels", min_value=1, max_value=12, step=1, value=1)
+grades = []
+for i in range(num_grades):
+    grade_name = st.text_input(f"Grade Level {i+1} Name", f"Grade {i+1}")
+    num_students = st.number_input(f"Number of Students in {grade_name}", min_value=0, step=1, value=0)
+    current_tuition = st.number_input(f"Current Tuition per Student in {grade_name} ($)", min_value=0.0, step=0.01, value=0.0)
+    grades.append({"Grade": grade_name, "Number of Students": num_students, "Current Tuition": current_tuition})
 
-st.write(f"Current Total Tuition: {format_currency(current_total_tuition)}")
-st.write(f"Projected New Average Tuition per Student: {format_currency(new_avg_tuition)}")
-st.write(f"Projected New Total Tuition: {format_currency(new_total_tuition)}")
+# Calculate initial projected tuition increases
+grades_df = pd.DataFrame(grades)
+grades_df["Projected Tuition per Student"] = grades_df["Current Tuition"] * (1 + total_increase_percentage / 100)
+grades_df["Total Current Tuition"] = grades_df["Number of Students"] * grades_df["Current Tuition"]
+grades_df["Total Projected Tuition"] = grades_df["Number of Students"] * grades_df["Projected Tuition per Student"]
+
+# Display initial results
+st.subheader("Initial Projected Tuition Increase")
+st.table(grades_df)
+
+# Allow user to adjust tuition per grade level
+st.subheader("Adjust Tuition by Grade Level")
+adjusted_tuitions = []
+for i, grade in grades_df.iterrows():
+    adjusted_tuition = st.number_input(
+        f"Adjusted Tuition for {grade['Grade']} ($)",
+        min_value=0.0,
+        step=0.01,
+        value=grade["Projected Tuition per Student"],
+    )
+    adjusted_tuitions.append(adjusted_tuition)
+
+grades_df["Adjusted Tuition per Student"] = adjusted_tuitions
+grades_df["Total Adjusted Tuition"] = grades_df["Number of Students"] * grades_df["Adjusted Tuition per Student"]
+
+# Comparison of original and adjusted results
+st.subheader("Comparison of Original and Adjusted Tuition")
+comparison_df = grades_df[["Grade", "Number of Students", "Current Tuition", "Projected Tuition per Student", "Adjusted Tuition per Student", "Total Current Tuition", "Total Projected Tuition", "Total Adjusted Tuition"]]
+st.table(comparison_df)
 
 # Step 6: Financial Metrics and KPIs
 st.subheader("Step 6: Financial Metrics and Key Performance Indicators")
-income_to_expense_ratio = (new_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
+current_total_tuition = grades_df["Total Current Tuition"].sum()
+projected_total_tuition = grades_df["Total Projected Tuition"].sum()
+adjusted_total_tuition = grades_df["Total Adjusted Tuition"].sum()
 
+st.write(f"Current Total Tuition: {format_currency(current_total_tuition)}")
+st.write(f"Projected Total Tuition (Based on Initial Increase): {format_currency(projected_total_tuition)}")
+st.write(f"Adjusted Total Tuition (User Adjusted): {format_currency(adjusted_total_tuition)}")
+
+income_to_expense_ratio = (adjusted_total_tuition / new_expense_budget) * 100 if new_expense_budget > 0 else 0.0
 st.write(f"Income to Expense (I/E) Ratio: {income_to_expense_ratio:.2f}%")
 st.write(f"Target KPI (I/E Ratio): {100:.2f}%")
 if income_to_expense_ratio < 100:
-    st.warning("Projected income does not fully cover projected expenses.")
+    st.warning("Adjusted tuition does not fully cover projected expenses.")
 
 # Downloadable Report
 if st.button("Generate PDF Report"):

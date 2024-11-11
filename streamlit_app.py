@@ -59,12 +59,19 @@ for i in range(num_items):
         item_cost = float(formatted_cost.replace(",", "").replace("$", ""))
     except ValueError:
         item_cost = 0.0
-    strategic_items.append({"Item": item_name, "Cost": item_cost})
+    item_description = st.text_area(f"Description of {item_name}", f"Details for {item_name}")
+    strategic_items.append({"Item": item_name, "Cost": item_cost, "Description": item_description})
 
 total_si_cost = sum(item["Cost"] for item in strategic_items)
 si_percentage = (total_si_cost / previous_expenses) * 100 if previous_expenses > 0 else 0.0
 st.info(f"Total Strategic Items Cost: {format_currency(total_si_cost)}")
 st.info(f"Strategic Items (SI) Percentage: {si_percentage:.2f}%")
+
+# Display Strategic Items Table
+if strategic_items:
+    st.subheader("Strategic Items Overview")
+    strategic_items_df = pd.DataFrame(strategic_items)
+    st.table(strategic_items_df)
 
 # Step 4: Total Expense Growth and Budget Projection
 st.subheader("Step 4: Total Expense Growth and Budget Projection")

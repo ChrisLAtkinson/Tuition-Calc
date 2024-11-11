@@ -130,25 +130,19 @@ if st.button("View Results"):
     # Projected Results with Explanations
     st.subheader("Projected Results")
     st.write(f"**Current Total Tuition:** {format_currency(current_total_tuition)}")
-    st.write("This is the total tuition revenue calculated based on the current tuition rates for all grades and the number of students in each grade.")
+    st.write("This represents the total tuition revenue currently collected across all grades. It’s calculated by multiplying the number of students by the current tuition rates for each grade.")
 
     st.write(f"**Projected Total Tuition (Initial Increase):** {format_currency(projected_total_tuition)}")
-    st.write("This is the total tuition revenue after applying the automatically calculated Total Increase Percentage to the current tuition rates.")
+    st.write("This reflects the estimated revenue after applying the calculated percentage increase (from inflation, productivity, and strategic items) to the current tuition rates.")
 
     st.write(f"**Projected Tuition Assistance Ratio:** {tuition_assistance_ratio_projected:.2f}%")
-    st.latex(r"""
-    \text{Tuition Assistance Ratio (\%)} = \left( \frac{\text{Total Financial Aid}}{\text{Projected Total Tuition}} \right) \times 100
-    """)
+    st.write("This measures how much of the tuition revenue will be allocated to financial aid. It helps ensure financial aid remains proportional to the new revenue levels.")
 
     st.write(f"**Projected Income to Expense (I/E) Ratio:** {income_to_expense_ratio_projected:.2f}%")
-    st.latex(r"""
-    \text{Income to Expense Ratio (\%)} = \left( \frac{\text{Projected Total Tuition}}{\text{New Expense Budget}} \right) \times 100
-    """)
+    st.write("This measures whether projected tuition revenue is enough to cover the school’s expenses. A ratio above 100% means revenue exceeds expenses, while below 100% means a shortfall.")
 
     st.write(f"**Tuition Rate Increase (Projected):** {tuition_rate_increase_projected:.2f}%")
-    st.latex(r"""
-    \text{Tuition Rate Increase (\%)} = \left( \frac{\text{Projected Total Tuition} - \text{Current Total Tuition}}{\text{Current Total Tuition}} \right) \times 100
-    """)
+    st.write("This represents the percentage growth in revenue due to the projected tuition changes compared to current tuition levels.")
 
 # Allow user to adjust tuition per grade level
 st.subheader("Adjust Tuition by Grade Level")
@@ -174,19 +168,13 @@ tuition_rate_increase_adjusted = ((adjusted_total_tuition - current_total_tuitio
 # Adjusted Results with Explanations
 st.subheader("Adjusted Results")
 st.write(f"**Adjusted Total Tuition (User Adjusted):** {format_currency(adjusted_total_tuition)}")
-st.write("This is the total tuition revenue based on the user-adjusted tuition rates for all grades.")
+st.write("This is the revenue collected based on user-defined adjustments to tuition rates for each grade.")
 
 st.write(f"**Adjusted Tuition Assistance Ratio:** {tuition_assistance_ratio_adjusted:.2f}%")
-st.latex(r"""
-\text{Tuition Assistance Ratio (\%)} = \left( \frac{\text{Total Financial Aid}}{\text{Adjusted Total Tuition}} \right) \times 100
-""")
+st.write("This measures how much of the adjusted tuition revenue is allocated to financial aid.")
 
 st.write(f"**Adjusted Income to Expense (I/E) Ratio:** {income_to_expense_ratio_adjusted:.2f}%")
-st.latex(r"""
-\text{Income to Expense Ratio (\%)} = \left( \frac{\text{Adjusted Total Tuition}}{\text{New Expense Budget}} \right) \times 100
-""")
+st.write("This shows whether adjusted tuition revenue is sufficient to cover the school’s expenses after adjustments.")
 
 st.write(f"**Tuition Rate Increase (Adjusted):** {tuition_rate_increase_adjusted:.2f}%")
-st.latex(r"""
-\text{Tuition Rate Increase (\%)} = \left( \frac{\text{Adjusted Total Tuition} - \text{Current Total Tuition}}{\text{Current Total Tuition}} \right) \times 100
-""")
+st.write("This shows the percentage increase in tuition revenue based on the user’s adjustments.")

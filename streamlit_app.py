@@ -60,8 +60,12 @@ st.title("Tuition and Expense Planning Tool")
 # Step 1: Previous Year's Total Expenses
 st.subheader("Step 1: Previous Year's Total Expenses")
 previous_expenses_input = st.text_input("Enter the Previous Year's Total Expenses ($)", "")
+
+# Format in real-time
 formatted_previous_expenses = format_input_as_currency(previous_expenses_input)
-previous_expenses_input = st.text_input("Formatted:", formatted_previous_expenses)
+st.write(f"Formatted Value: {formatted_previous_expenses}")
+
+# Convert to float for calculations
 try:
     previous_expenses = float(previous_expenses_input.replace(",", "").replace("$", ""))
 except ValueError:
@@ -86,12 +90,17 @@ num_items = st.number_input("Number of Strategic Items", min_value=0, max_value=
 for i in range(num_items):
     item_name = st.text_input(f"Strategic Item {i+1} Name", f"Item {i+1}")
     item_cost_input = st.text_input(f"Cost of {item_name} ($)", "")
-    item_cost_input = format_input_as_currency(item_cost_input)
-    item_cost_input = st.text_input("Formatted:", item_cost_input)
+
+    # Real-time formatting
+    formatted_item_cost = format_input_as_currency(item_cost_input)
+    st.write(f"Formatted Cost: {formatted_item_cost}")
+
+    # Convert to float for calculations
     try:
         item_cost = float(item_cost_input.replace(",", "").replace("$", ""))
     except ValueError:
         item_cost = 0.0
+
     item_description = st.text_area(f"Description of {item_name}", f"Details for {item_name}")
     strategic_items.append({"Item": item_name, "Cost": item_cost, "Description": item_description})
 
@@ -118,7 +127,8 @@ st.write(f"Projected New Expense Budget: {format_currency(new_expense_budget)}")
 st.subheader("Step 5: Tuition Assistance")
 financial_aid_input = st.text_input("Total Financial Aid Provided ($)", "")
 formatted_financial_aid = format_input_as_currency(financial_aid_input)
-financial_aid_input = st.text_input("Formatted:", formatted_financial_aid)
+st.write(f"Formatted Value: {formatted_financial_aid}")
+
 try:
     financial_aid = float(financial_aid_input.replace(",", "").replace("$", ""))
 except ValueError:
@@ -128,8 +138,6 @@ if financial_aid > 0:
     st.success(f"Total Financial Aid: {format_currency(financial_aid)}")
 else:
     st.warning("Please enter valid financial aid amount.")
-
-# Remaining code for Steps 6 and download PDF remains unchanged
 
 # Generate and Download Report
 st.subheader("Generate and Download Report")
